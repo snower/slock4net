@@ -7,7 +7,7 @@ using System.Text;
 
 namespace slock4net
 {
-    class Lock {
+    public class Lock {
         private Database database;
         private byte[] lockKey;
         private byte[] lockId;

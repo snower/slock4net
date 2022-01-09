@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace slock4net
 {
-    class Event
+    public class Event
     {
         private Database database;
         private byte[] eventKey;

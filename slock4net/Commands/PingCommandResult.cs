@@ -5,20 +5,20 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class PingCommandResult : CommandResult
+    public class PingCommandResult : CommandResult
     {
         public PingCommandResult() : base()
         {
         }
         public override byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(this.Result);
                     bw.Write(new byte[44], 0, 44);

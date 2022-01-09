@@ -5,6 +5,6 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class ClientCommandTimeoutException : SlockException {
+    public class ClientCommandTimeoutException : SlockException {
     }
 }

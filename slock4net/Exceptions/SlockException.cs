@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class SlockException : Exception
+    public class SlockException : Exception
     {
         public SlockException() : base()
         {

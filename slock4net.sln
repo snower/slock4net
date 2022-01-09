@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30907.101
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "slock4net", "slock4net\slock4net.csproj", "{0628A8CE-9EE7-4BD0-B1D6-1BB4D2FFFECE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "slock4net", "slock4net\slock4net.csproj", "{0628A8CE-9EE7-4BD0-B1D6-1BB4D2FFFECE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "tests", "tests\tests.csproj", "{B73CF3EE-265B-488B-B987-C72A4124E53C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{0628A8CE-9EE7-4BD0-B1D6-1BB4D2FFFECE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0628A8CE-9EE7-4BD0-B1D6-1BB4D2FFFECE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0628A8CE-9EE7-4BD0-B1D6-1BB4D2FFFECE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B73CF3EE-265B-488B-B987-C72A4124E53C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B73CF3EE-265B-488B-B987-C72A4124E53C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B73CF3EE-265B-488B-B987-C72A4124E53C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B73CF3EE-265B-488B-B987-C72A4124E53C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace slock4net
 {
-    class ReentrantLock
+    public class ReentrantLock
     {
         private Database database;
         private byte[] lockKey;

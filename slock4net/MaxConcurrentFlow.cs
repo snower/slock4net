@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace slock4net
 {
-    class MaxConcurrentFlow
+    public class MaxConcurrentFlow
     {
         private Database database;
         private byte[] flowKey;

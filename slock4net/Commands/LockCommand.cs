@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class LockCommand : Command
+    public class LockCommand : Command
     {
         private static long lockIdIndex = 0;
         public byte Flag { get; protected set; }
@@ -31,28 +31,28 @@ namespace slock4net.Commands
 
         public override byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(this.Flag);
                     bw.Write(this.DatabaseId);
                     bw.Write(this.LockId, 0, 16);
                     bw.Write(this.LockKey, 0, 16);
-                    bw.Write(this.Timeout & 0xff);
-                    bw.Write((this.Timeout >> 8) & 0xff);
-                    bw.Write((this.Timeout >> 16) & 0xff);
-                    bw.Write((this.Timeout >> 24) & 0xff);
-                    bw.Write(this.Expried & 0xff);
-                    bw.Write((this.Expried >> 8) & 0xff);
-                    bw.Write((this.Expried >> 16) & 0xff);
-                    bw.Write((this.Expried >> 24) & 0xff);
-                    bw.Write(this.Count & 0xff);
-                    bw.Write((this.Count >> 8) & 0xff);
+                    bw.Write((byte)(this.Timeout & 0xff));
+                    bw.Write((byte)((this.Timeout >> 8) & 0xff));
+                    bw.Write((byte)((this.Timeout >> 16) & 0xff));
+                    bw.Write((byte)((this.Timeout >> 24) & 0xff));
+                    bw.Write((byte)(this.Expried & 0xff));
+                    bw.Write((byte)((this.Expried >> 8) & 0xff));
+                    bw.Write((byte)((this.Expried >> 16) & 0xff));
+                    bw.Write((byte)((this.Expried >> 24) & 0xff));
+                    bw.Write((byte)(this.Count & 0xff));
+                    bw.Write((byte)((this.Count >> 8) & 0xff));
                     bw.Write(this.RCount);
                 }
                 return ms.ToArray();
@@ -86,35 +86,35 @@ namespace slock4net.Commands
 
         public static byte[] GenLockId()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(16))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     long timestamp = (new DateTimeOffset(DateTime.Now)).ToUnixTimeMilliseconds();
                     long randNumber = (long)((new Random()).NextDouble() * 0xffffffffffffffffL);
                     long ri = System.Threading.Interlocked.Increment(ref lockIdIndex) & 0x7fffffffL;
-                    bw.Write((byte)(timestamp >> 40) & 0xff);
-                    bw.Write((byte)(timestamp >> 32) & 0xff);
-                    bw.Write((byte)(timestamp >> 24) & 0xff);
-                    bw.Write((byte)(timestamp >> 16) & 0xff);
-                    bw.Write((byte)(timestamp >> 8) & 0xff);
-                    bw.Write((byte)timestamp & 0xff);
-                    bw.Write((byte)(randNumber >> 40) & 0xff);
-                    bw.Write((byte)(randNumber >> 32) & 0xff);
-                    bw.Write((byte)(randNumber >> 24) & 0xff);
-                    bw.Write((byte)(randNumber >> 16) & 0xff);
-                    bw.Write((byte)(randNumber >> 8) & 0xff);
-                    bw.Write((byte)randNumber & 0xff);
-                    bw.Write((byte)(ri >> 24) & 0xff);
-                    bw.Write((byte)(ri >> 16) & 0xff);
-                    bw.Write((byte)(ri >> 8) & 0xff);
-                    bw.Write((byte)ri & 0xff);
+                    bw.Write((byte)((timestamp >> 40) & 0xff));
+                    bw.Write((byte)((timestamp >> 32) & 0xff));
+                    bw.Write((byte)((timestamp >> 24) & 0xff));
+                    bw.Write((byte)((timestamp >> 16) & 0xff));
+                    bw.Write((byte)((timestamp >> 8) & 0xff));
+                    bw.Write((byte)(timestamp & 0xff));
+                    bw.Write((byte)((randNumber >> 40) & 0xff));
+                    bw.Write((byte)((randNumber >> 32) & 0xff));
+                    bw.Write((byte)((randNumber >> 24) & 0xff));
+                    bw.Write((byte)((randNumber >> 16) & 0xff));
+                    bw.Write((byte)((randNumber >> 8) & 0xff));
+                    bw.Write((byte)(randNumber & 0xff));
+                    bw.Write((byte)((ri >> 24) & 0xff));
+                    bw.Write((byte)((ri >> 16) & 0xff));
+                    bw.Write((byte)((ri >> 8) & 0xff));
+                    bw.Write((byte)(ri & 0xff));
                 }
                 return ms.ToArray();
             }
         }
 
-        public override bool WaiteWaiter()
+        public override bool WaitWaiter()
         {
             if (this.waiter == null)
             {

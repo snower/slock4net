@@ -6,7 +6,7 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class LockException : SlockException
+    public class LockException : SlockException
     {
         static String[] ERROR_MSG = new String[]{
             "OK",

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace slock4net
 {
-    class Database
+    public class Database
     {
         public IClient Client { get; protected set; }
         public byte DatabaseId { get; protected set; }

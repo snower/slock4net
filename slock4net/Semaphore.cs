@@ -7,7 +7,7 @@ using System.Text;
 
 namespace slock4net
 {
-    class Semaphore
+    public class Semaphore
     {
         private Database database;
         private byte[] semaphoreKey;

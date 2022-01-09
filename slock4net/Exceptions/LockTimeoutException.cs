@@ -6,7 +6,7 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class LockTimeoutException : LockException
+    public class LockTimeoutException : LockException
     {
         public LockTimeoutException(Command command, CommandResult commandResult) : base(command, commandResult)
         {

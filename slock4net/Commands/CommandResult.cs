@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class CommandResult : ICommand
+    public class CommandResult : ICommand
     {
         public byte Magic { get; protected set; }
         public byte Version { get; protected set; }
@@ -26,13 +26,13 @@ namespace slock4net.Commands
         }
         public virtual byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(this.Result);
                     bw.Write(new byte[44], 0, 44);

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class LockCommandResult : CommandResult
+    public class LockCommandResult : CommandResult
     {
         public byte Flag { get; protected set; }
         public byte DatabaseId { get; protected set; }
@@ -23,23 +23,23 @@ namespace slock4net.Commands
 
         public override byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(this.Result);
                     bw.Write(this.Flag);
                     bw.Write(this.DatabaseId);
                     bw.Write(this.LockId, 0, 16);
                     bw.Write(this.LockKey, 0, 16);
-                    bw.Write(this.LCount & 0xff);
-                    bw.Write((this.LCount >> 8) & 0xff);
-                    bw.Write(this.Count & 0xff);
-                    bw.Write((this.Count >> 8) & 0xff);
+                    bw.Write((byte)(this.LCount & 0xff));
+                    bw.Write((byte)((this.LCount >> 8) & 0xff));
+                    bw.Write((byte)(this.Count & 0xff));
+                    bw.Write((byte)((this.Count >> 8) & 0xff));
                     bw.Write(this.LRCount);
                     bw.Write(this.RCount);
                     bw.Write(new byte[4], 0, 4);

@@ -4,7 +4,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    interface ICommand
+    public interface ICommand
     {
         public const byte MAGIC = 0x56;
         public const byte VERSION = 0x01;

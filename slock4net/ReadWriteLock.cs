@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace slock4net
 {
-    class ReadWriteLock
+    public class ReadWriteLock
     {
         private Database database;
         private byte[] lockKey;

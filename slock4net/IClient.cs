@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net
 {
-    interface IClient
+    public interface IClient
     {
         public abstract void Open();
         public abstract void Close();

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace slock4net
 {
-    class SlockReplsetClient : IClient
+    public class SlockReplsetClient : IClient
     {
         protected String[] hosts;
         protected LinkedList<SlockClient> clients;
@@ -69,15 +69,13 @@ namespace slock4net
             {
                 throw new ClientClosedException();
             }
-            try
-            {
-                SlockClient client = livedClients.First.Value;
-                return client.SendCommand(command);
-            }
-            catch (Exception)
+
+            LinkedListNode<SlockClient> firstNode = livedClients.First;
+            if(firstNode == null || firstNode.Value == null)
             {
                 throw new ClientUnconnectException();
             }
+            return firstNode.Value.SendCommand(command);
         }
 
         public Database SelectDatabase(byte databaseId)

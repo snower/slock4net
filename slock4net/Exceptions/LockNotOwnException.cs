@@ -6,7 +6,7 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class LockNotOwnException : LockException
+    public class LockNotOwnException : LockException
     {
         public LockNotOwnException(Command command, CommandResult commandResult) : base(command, commandResult)
         {

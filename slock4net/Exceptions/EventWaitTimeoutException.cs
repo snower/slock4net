@@ -5,6 +5,6 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class EventWaitTimeoutException : SlockException {
+    public class EventWaitTimeoutException : SlockException {
     }
 }

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace slock4net.Exceptions
 {
-    class LockLockedException : LockException
+    public class LockLockedException : LockException
     {
         public LockLockedException(Command command, CommandResult commandResult) : base(command, commandResult)
         {

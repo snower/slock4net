@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class PingCommand : Command
+    public class PingCommand : Command
     {
         public PingCommand() : base(ICommand.COMMAND_TYPE_PING)
         {
@@ -13,13 +13,13 @@ namespace slock4net.Commands
         }
         public override byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(new byte[45], 0, 45);
                 }

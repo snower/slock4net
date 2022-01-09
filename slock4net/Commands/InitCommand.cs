@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.Commands
 {
-    class InitCommand : Command
+    public class InitCommand : Command
     {
         private static long clientIdIndex = 0;
 
@@ -18,13 +18,13 @@ namespace slock4net.Commands
 
         public override byte[] DumpCommand()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(64))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     bw.Write(ICommand.MAGIC);
                     bw.Write(ICommand.VERSION);
-                    bw.Write(ICommand.COMMAND_TYPE_LOCK);
+                    bw.Write(this.CommandType);
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(this.ClientId, 0, 16);
                     bw.Write(new byte[29], 0, 29);
@@ -51,29 +51,29 @@ namespace slock4net.Commands
 
         public static byte[] GenClientId()
         {
-            using (MemoryStream ms = new MemoryStream())
+            using (MemoryStream ms = new MemoryStream(16))
             {
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     long timestamp = (new DateTimeOffset(DateTime.Now)).ToUnixTimeMilliseconds();
                     long randNumber = (long)((new Random()).NextDouble() * 0xffffffffffffffffL);
                     long ri = System.Threading.Interlocked.Increment(ref clientIdIndex) & 0x7fffffffL;
-                    bw.Write((byte)(timestamp >> 40) & 0xff);
-                    bw.Write((byte)(timestamp >> 32) & 0xff);
-                    bw.Write((byte)(timestamp >> 24) & 0xff);
-                    bw.Write((byte)(timestamp >> 16) & 0xff);
-                    bw.Write((byte)(timestamp >> 8) & 0xff);
-                    bw.Write((byte)timestamp & 0xff);
-                    bw.Write((byte)(randNumber >> 40) & 0xff);
-                    bw.Write((byte)(randNumber >> 32) & 0xff);
-                    bw.Write((byte)(randNumber >> 24) & 0xff);
-                    bw.Write((byte)(randNumber >> 16) & 0xff);
-                    bw.Write((byte)(randNumber >> 8) & 0xff);
-                    bw.Write((byte)randNumber & 0xff);
-                    bw.Write((byte)(ri >> 24) & 0xff);
-                    bw.Write((byte)(ri >> 16) & 0xff);
-                    bw.Write((byte)(ri >> 8) & 0xff);
-                    bw.Write((byte)ri & 0xff);
+                    bw.Write((byte)((timestamp >> 40) & 0xff));
+                    bw.Write((byte)((timestamp >> 32) & 0xff));
+                    bw.Write((byte)((timestamp >> 24) & 0xff));
+                    bw.Write((byte)((timestamp >> 16) & 0xff));
+                    bw.Write((byte)((timestamp >> 8) & 0xff));
+                    bw.Write((byte)(timestamp & 0xff));
+                    bw.Write((byte)((randNumber >> 40) & 0xff));
+                    bw.Write((byte)((randNumber >> 32) & 0xff));
+                    bw.Write((byte)((randNumber >> 24) & 0xff));
+                    bw.Write((byte)((randNumber >> 16) & 0xff));
+                    bw.Write((byte)((randNumber >> 8) & 0xff));
+                    bw.Write((byte)(randNumber & 0xff));
+                    bw.Write((byte)((ri >> 24) & 0xff));
+                    bw.Write((byte)((ri >> 16) & 0xff));
+                    bw.Write((byte)((ri >> 8) & 0xff));
+                    bw.Write((byte)(ri & 0xff));
                 }
                 return ms.ToArray();
             }

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace slock4net
 {
-    class TokenBucketFlow
+    public class TokenBucketFlow
     {
         private Database database;
         private byte[] flowKey;
