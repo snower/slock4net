@@ -151,6 +151,7 @@ namespace slock4net
                 throw new SocketException((int)SocketError.SocketError);
             }
 
+            this.socket.NoDelay = true;
             this.InitClient();
             if (this.replsetClient != null)
             {
