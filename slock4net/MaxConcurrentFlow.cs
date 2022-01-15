@@ -12,14 +12,14 @@ namespace slock4net
 {
     public class MaxConcurrentFlow
     {
-        private Database database;
+        private SlockDatabase database;
         private byte[] flowKey;
         private UInt16 count;
         private UInt32 timeout;
         private UInt32 expried;
         private Lock flowLock;
 
-        public MaxConcurrentFlow(Database database, byte[] flowKey, UInt16 count, UInt32 timeout, UInt32 expried)
+        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, UInt16 count, UInt32 timeout, UInt32 expried)
         {
             this.database = database;
             if (flowKey.Length > 16)
@@ -39,7 +39,11 @@ namespace slock4net
             this.expried = expried;
         }
 
-        public void Acquire()
+        public MaxConcurrentFlow(SlockDatabase database, string flowKey, UInt16 count, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried)
+        {
+        }
+
+            public void Acquire()
         {
             if (flowLock == null)
             {

@@ -6,13 +6,13 @@ using System.Text;
 
 namespace slock4net
 {
-    public class SlockReplsetClient : IClient
+    public class SlockReplsetClient : ISlockClient
     {
         protected String[] hosts;
         protected LinkedList<SlockClient> clients;
         protected LinkedList<SlockClient> livedClients;
         protected bool closed;
-        protected Database[] databases;
+        protected SlockDatabase[] databases;
 
         public SlockReplsetClient(String[] hosts)
         {
@@ -20,7 +20,7 @@ namespace slock4net
             this.clients = new LinkedList<SlockClient>();
             this.livedClients = new LinkedList<SlockClient>();
             this.closed = false;
-            this.databases = new Database[256];
+            this.databases = new SlockDatabase[256];
         }
         public void Open()
         {
@@ -36,6 +36,18 @@ namespace slock4net
                 this.clients.AddLast(client);
                 client.TryOpen();
             }
+        }
+
+        public ISlockClient TryOpen()
+        {
+            try
+            {
+                this.Open();
+            } catch (Exception)
+            {
+                return null;
+            }
+            return this;
         }
 
         public void Close()
@@ -78,7 +90,7 @@ namespace slock4net
             return firstNode.Value.SendCommand(command);
         }
 
-        public Database SelectDatabase(byte databaseId)
+        public SlockDatabase SelectDatabase(byte databaseId)
         {
             if (this.databases[databaseId] == null)
             {
@@ -86,7 +98,7 @@ namespace slock4net
                 {
                     if (this.databases[databaseId] == null)
                     {
-                        this.databases[databaseId] = new Database(this, databaseId);
+                        this.databases[databaseId] = new SlockDatabase(this, databaseId);
                     }
                 }
             }
@@ -109,7 +121,17 @@ namespace slock4net
             return this.SelectDatabase(0).NewLock(lockKey, timeout, expried);
         }
 
+        public Lock NewLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewLock(lockKey, timeout, expried);
+        }
+
         public Event NewEvent(byte[] eventKey, uint timeout, uint expried, bool defaultSeted)
+        {
+            return this.SelectDatabase(0).NewEvent(eventKey, timeout, expried, defaultSeted);
+        }
+
+        public Event NewEvent(string eventKey, uint timeout, uint expried, bool defaultSeted)
         {
             return this.SelectDatabase(0).NewEvent(eventKey, timeout, expried, defaultSeted);
         }
@@ -119,7 +141,17 @@ namespace slock4net
             return this.SelectDatabase(0).NewReentrantLock(lockKey, timeout, expried);
         }
 
+        public ReentrantLock NewReentrantLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewReentrantLock(lockKey, timeout, expried);
+        }
+
         public ReadWriteLock NewReadWriteLock(byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewReadWriteLock(lockKey, timeout, expried);
+        }
+
+        public ReadWriteLock NewReadWriteLock(string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewReadWriteLock(lockKey, timeout, expried);
         }
@@ -129,12 +161,27 @@ namespace slock4net
             return this.SelectDatabase(0).NewSemaphore(semaphoreKey, count, timeout, expried);
         }
 
+        public Semaphore NewSemaphore(string semaphoreKey, ushort count, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewSemaphore(semaphoreKey, count, timeout, expried);
+        }
+
         public MaxConcurrentFlow NewMaxConcurrentFlow(byte[] flowKey, ushort count, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried);
         }
 
+        public MaxConcurrentFlow NewMaxConcurrentFlow(string flowKey, ushort count, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried);
+        }
+
         public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period)
+        {
+            return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
         }

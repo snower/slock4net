@@ -9,13 +9,13 @@ namespace slock4net
 {
     public class Semaphore
     {
-        private Database database;
+        private SlockDatabase database;
         private byte[] semaphoreKey;
         private UInt32 timeout;
         private UInt32 expried;
         private UInt16 count;
 
-        public Semaphore(Database database, byte[] semaphoreKey, UInt16 count, UInt32 timeout, UInt32 expried)
+        public Semaphore(SlockDatabase database, byte[] semaphoreKey, UInt16 count, UInt32 timeout, UInt32 expried)
         {
             this.database = database;
             if (semaphoreKey.Length > 16)
@@ -33,6 +33,11 @@ namespace slock4net
             this.count = (UInt16)(count > 0 ? count - 1 : 0);
             this.timeout = timeout;
             this.expried = expried;
+        }
+
+        public Semaphore(SlockDatabase database, string semaphoreKey, UInt16 count, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(semaphoreKey), count, timeout, expried)
+        {
+
         }
 
         public void Acquire()

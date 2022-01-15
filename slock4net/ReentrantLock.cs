@@ -12,13 +12,13 @@ namespace slock4net
 {
     public class ReentrantLock
     {
-        private Database database;
+        private SlockDatabase database;
         private byte[] lockKey;
         private UInt32 timeout;
         private UInt32 expried;
         private Lock reentrantLock;
 
-        public ReentrantLock(Database database, byte[] lockKey, UInt32 timeout, UInt32 expried)
+        public ReentrantLock(SlockDatabase database, byte[] lockKey, UInt32 timeout, UInt32 expried)
         {
             this.database = database;
             if (lockKey.Length > 16)
@@ -37,6 +37,10 @@ namespace slock4net
             this.expried = expried;
         }
 
+        public ReentrantLock(SlockDatabase database, string lockKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(lockKey), timeout, expried)
+        {
+
+        }
         public void Acquire()
         {
             lock (this)

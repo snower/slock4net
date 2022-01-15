@@ -90,5 +90,32 @@ namespace tests
                 client.Close();
             }
         }
+
+        [TestMethod]
+        public void TestPing()
+        {
+            SlockClient client = new SlockClient(clientHost, clinetPort);
+            client.Open();
+            try
+            {
+                client.Ping();
+            }
+            finally
+            {
+                client.Close();
+            }
+
+            SlockReplsetClient repletClient = new SlockReplsetClient(new string[]{clientHost + ":" + clinetPort
+    });
+            repletClient.Open();
+            try
+            {
+                repletClient.Ping();
+            }
+            finally
+            {
+                repletClient.Close();
+            }
+        }
     }
 }

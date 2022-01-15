@@ -9,7 +9,7 @@ namespace slock4net
 {
     public class TokenBucketFlow
     {
-        private Database database;
+        private SlockDatabase database;
         private byte[] flowKey;
         private UInt16 count;
         private UInt32 timeout;
@@ -17,7 +17,7 @@ namespace slock4net
         private UInt32 expriedFlag;
         private Lock flowLock;
 
-        public TokenBucketFlow(Database database, byte[] flowKey, UInt16 count, UInt32 timeout, double period)
+        public TokenBucketFlow(SlockDatabase database, byte[] flowKey, UInt16 count, UInt32 timeout, double period)
         {
             this.database = database;
             if (flowKey.Length > 16)
@@ -35,6 +35,11 @@ namespace slock4net
             this.count = (UInt16)(count > 0 ? count - 1 : 0);
             this.timeout = timeout;
             this.period = period;
+        }
+
+        public TokenBucketFlow(SlockDatabase database, string flowKey, UInt16 count, UInt32 timeout, double period) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, period)
+        {
+
         }
 
         public void SetExpriedFlag(UInt32 expriedFlag)

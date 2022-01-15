@@ -12,7 +12,7 @@ namespace slock4net
 {
     public class Event
     {
-        private Database database;
+        private SlockDatabase database;
         private byte[] eventKey;
         private UInt32 timeout;
         private UInt32 expried;
@@ -21,7 +21,7 @@ namespace slock4net
         private Lock waitLock;
         private bool defaultSeted;
 
-        public Event(Database database, byte[] eventKey, UInt32 timeout, UInt32 expried, bool defaultSeted)
+        public Event(SlockDatabase database, byte[] eventKey, UInt32 timeout, UInt32 expried, bool defaultSeted)
         {
             this.database = database;
             if (eventKey.Length > 16)
@@ -41,7 +41,16 @@ namespace slock4net
             this.defaultSeted = defaultSeted;
         }
 
-        public Event(Database database, byte[] eventKey, UInt32 timeout, UInt32 expried) : this(database, eventKey, timeout, expried, true)
+        public Event(SlockDatabase database, byte[] eventKey, UInt32 timeout, UInt32 expried) : this(database, eventKey, timeout, expried, true)
+        {
+        }
+
+        public Event(SlockDatabase database, string eventKey, UInt32 timeout, UInt32 expried, bool defaultSeted) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, defaultSeted)
+        {
+
+        }
+
+        public Event(SlockDatabase database, string eventKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, true)
         {
         }
 

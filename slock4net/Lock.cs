@@ -8,7 +8,7 @@ using System.Text;
 namespace slock4net
 {
     public class Lock {
-        private Database database;
+        private SlockDatabase database;
         private byte[] lockKey;
         private byte[] lockId;
         private UInt32 timeout;
@@ -16,7 +16,7 @@ namespace slock4net
         private UInt16 count;
         private byte rCount;
 
-        public Lock(Database database, byte[] lockKey, byte[] lockId, UInt32 timeout, UInt32 expried, UInt16 count, byte rCount) {
+        public Lock(SlockDatabase database, byte[] lockKey, byte[] lockId, UInt32 timeout, UInt32 expried, UInt16 count, byte rCount) {
             this.database = database;
             if (lockKey.Length > 16) {
                 using (MD5 md5 = MD5.Create())
@@ -46,7 +46,11 @@ namespace slock4net
             this.rCount = rCount;
         }
 
-        public Lock(Database database, byte[] lockKey, UInt32 timeout, UInt32 expried) : this(database, lockKey, null, timeout, expried, 0, 0) {
+        public Lock(SlockDatabase database, byte[] lockKey, UInt32 timeout, UInt32 expried) : this(database, lockKey, null, timeout, expried, 0, 0) {
+        }
+
+        public Lock(SlockDatabase database, string lockKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(lockKey), null, timeout, expried, 0, 0)
+        {
         }
 
         public void Acquire(byte flag) {

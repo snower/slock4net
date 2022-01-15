@@ -9,13 +9,13 @@ using System.Threading;
 
 namespace slock4net
 {
-    public class SlockClient : IClient
+    public class SlockClient : ISlockClient
     {
         protected string host;
         protected int port;
         protected Socket socket;
         protected Thread thread;
-        protected Database[] databases;
+        protected SlockDatabase[] databases;
         protected Dictionary<String, Command> requests;
         protected SlockReplsetClient replsetClient;
         protected byte[] clientId;
@@ -33,11 +33,11 @@ namespace slock4net
         {
             this.host = host;
             this.port = port;
-            this.databases = new Database[256];
+            this.databases = new SlockDatabase[256];
             this.requests = new Dictionary<String, Command>();
         }
 
-        public SlockClient(String host, int port, SlockReplsetClient replsetClient, Database[] databases)
+        public SlockClient(String host, int port, SlockReplsetClient replsetClient, SlockDatabase[] databases)
         {
             this.host = host;
             this.port = port;
@@ -59,13 +59,13 @@ namespace slock4net
             this.thread.Start();
         }
 
-        public bool TryOpen()
+        public ISlockClient TryOpen()
         {
             try
             {
                 if(this.socket != null)
                 {
-                    return true;
+                    return this;
                 }
                 this.Connect();
             } catch(Exception)
@@ -73,12 +73,12 @@ namespace slock4net
                 this.thread = new Thread(new ThreadStart(this.Run));
                 this.thread.IsBackground = true;
                 this.thread.Start();
-                return false;
+                return null;
             }
             this.thread = new Thread(new ThreadStart(this.Run));
             this.thread.IsBackground = true;
             this.thread.Start();
-            return true;
+            return this;
         }
 
         public void Close()
@@ -422,7 +422,7 @@ namespace slock4net
             return command.CommandResult;
         }
 
-        public Database SelectDatabase(byte databaseId)
+        public SlockDatabase SelectDatabase(byte databaseId)
         {
             if (this.databases[databaseId] == null)
             {
@@ -430,7 +430,7 @@ namespace slock4net
                 {
                     if (this.databases[databaseId] == null)
                     {
-                        this.databases[databaseId] = new Database(this, databaseId);
+                        this.databases[databaseId] = new SlockDatabase(this, databaseId);
                     }
                 }
             }
@@ -453,7 +453,17 @@ namespace slock4net
             return this.SelectDatabase(0).NewLock(lockKey, timeout, expried);
         }
 
+        public Lock NewLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewLock(lockKey, timeout, expried);
+        }
+
         public Event NewEvent(byte[] eventKey, uint timeout, uint expried, bool defaultSeted)
+        {
+            return this.SelectDatabase(0).NewEvent(eventKey, timeout, expried, defaultSeted);
+        }
+
+        public Event NewEvent(string eventKey, uint timeout, uint expried, bool defaultSeted)
         {
             return this.SelectDatabase(0).NewEvent(eventKey, timeout, expried, defaultSeted);
         }
@@ -463,7 +473,17 @@ namespace slock4net
             return this.SelectDatabase(0).NewReentrantLock(lockKey, timeout, expried);
         }
 
+        public ReentrantLock NewReentrantLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewReentrantLock(lockKey, timeout, expried);
+        }
+
         public ReadWriteLock NewReadWriteLock(byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewReadWriteLock(lockKey, timeout, expried);
+        }
+
+        public ReadWriteLock NewReadWriteLock(string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewReadWriteLock(lockKey, timeout, expried);
         }
@@ -473,12 +493,27 @@ namespace slock4net
             return this.SelectDatabase(0).NewSemaphore(semaphoreKey, count, timeout, expried);
         }
 
+        public Semaphore NewSemaphore(string semaphoreKey, ushort count, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewSemaphore(semaphoreKey, count, timeout, expried);
+        }
+
         public MaxConcurrentFlow NewMaxConcurrentFlow(byte[] flowKey, ushort count, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried);
         }
 
+        public MaxConcurrentFlow NewMaxConcurrentFlow(string flowKey, ushort count, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried);
+        }
+
         public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period)
+        {
+            return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
         }
