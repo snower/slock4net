@@ -1,7 +1,6 @@
 using slock4net.Commands;
 using slock4net.Exceptions;
 using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,12 +10,15 @@ namespace slock4net
         private SlockDatabase database;
         private byte[] lockKey;
         private byte[] lockId;
-        private UInt32 timeout;
-        private UInt32 expried;
-        private UInt16 count;
+        private uint timeout;
+        private uint expried;
+        private ushort count;
         private byte rCount;
 
-        public Lock(SlockDatabase database, byte[] lockKey, byte[] lockId, UInt32 timeout, UInt32 expried, UInt16 count, byte rCount) {
+        public byte[] LockKey { get { return lockKey; } }
+        public byte[] LockId { get { return lockId; } }
+
+        public Lock(SlockDatabase database, byte[] lockKey, byte[] lockId, uint timeout, uint expried, ushort count, byte rCount) {
             this.database = database;
             if (lockKey.Length > 16) {
                 using (MD5 md5 = MD5.Create())
@@ -46,19 +48,19 @@ namespace slock4net
             this.rCount = rCount;
         }
 
-        public Lock(SlockDatabase database, byte[] lockKey, UInt32 timeout, UInt32 expried) : this(database, lockKey, null, timeout, expried, 0, 0) {
+        public Lock(SlockDatabase database, byte[] lockKey, uint timeout, uint expried) : this(database, lockKey, null, timeout, expried, 0, 0) {
         }
 
-        public Lock(SlockDatabase database, string lockKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(lockKey), null, timeout, expried, 0, 0)
+        public Lock(SlockDatabase database, string lockKey, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(lockKey), null, timeout, expried, 0, 0)
         {
         }
 
-        public void Acquire(byte flag) {
+        public LockCommandResult Acquire(byte flag) {
             LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_LOCK, flag, database.DatabaseId, lockKey,
                     lockId, timeout, expried, count, rCount);
             LockCommandResult commandResult = (LockCommandResult)database.Client.SendCommand(command);
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED) {
-                return;
+                return commandResult;
             }
 
             switch (commandResult.Result) {
@@ -79,12 +81,12 @@ namespace slock4net
             this.Acquire(0);
         }
 
-        public void Release(byte flag) {
+        public LockCommandResult Release(byte flag) {
             LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, flag, database.DatabaseId, lockKey,
                     lockId, timeout, expried, count, rCount);
             LockCommandResult commandResult = (LockCommandResult)database.Client.SendCommand(command);
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED) {
-                return;
+                return commandResult;
             }
 
             switch (commandResult.Result) {
@@ -105,7 +107,7 @@ namespace slock4net
             this.Release(0);
         }
 
-        public CommandResult show() {
+        public CommandResult Show() {
             try {
                 this.Acquire(ICommand.LOCK_FLAG_SHOW_WHEN_LOCKED);
             } catch (LockNotOwnException e) {
@@ -114,7 +116,7 @@ namespace slock4net
             return null;
         }
 
-        public void update() {
+        public void Update() {
             try {
                 this.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
             } catch (LockLockedException) {
@@ -123,6 +125,11 @@ namespace slock4net
 
         public void ReleaseHead() {
             this.Release(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED);
+        }
+
+        public LockCommandResult ReleaseHeadRetoLockWait()
+        {
+            return this.Acquire((byte) (ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED | ICommand.UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT));
         }
     }
 }

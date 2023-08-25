@@ -1,7 +1,5 @@
 using slock4net.Commands;
-using slock4net.Exceptions;
 using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,11 +9,11 @@ namespace slock4net
     {
         private SlockDatabase database;
         private byte[] semaphoreKey;
-        private UInt32 timeout;
-        private UInt32 expried;
-        private UInt16 count;
+        private uint timeout;
+        private uint expried;
+        private ushort count;
 
-        public Semaphore(SlockDatabase database, byte[] semaphoreKey, UInt16 count, UInt32 timeout, UInt32 expried)
+        public Semaphore(SlockDatabase database, byte[] semaphoreKey, ushort count, uint timeout, uint expried)
         {
             this.database = database;
             if (semaphoreKey.Length > 16)
@@ -30,12 +28,12 @@ namespace slock4net
                 this.semaphoreKey = new byte[16];
                 Array.Copy(semaphoreKey, 0, this.semaphoreKey, 16 - semaphoreKey.Length, semaphoreKey.Length);
             }
-            this.count = (UInt16)(count > 0 ? count - 1 : 0);
+            this.count = (ushort)(count > 0 ? count - 1 : 0);
             this.timeout = timeout;
             this.expried = expried;
         }
 
-        public Semaphore(SlockDatabase database, string semaphoreKey, UInt16 count, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(semaphoreKey), count, timeout, expried)
+        public Semaphore(SlockDatabase database, string semaphoreKey, ushort count, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(semaphoreKey), count, timeout, expried)
         {
 
         }

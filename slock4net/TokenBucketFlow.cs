@@ -1,7 +1,6 @@
 using slock4net.Commands;
 using slock4net.Exceptions;
 using System;
-using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -11,13 +10,13 @@ namespace slock4net
     {
         private SlockDatabase database;
         private byte[] flowKey;
-        private UInt16 count;
-        private UInt32 timeout;
+        private ushort count;
+        private uint timeout;
         private double period;
-        private UInt32 expriedFlag;
+        private uint expriedFlag;
         private Lock flowLock;
 
-        public TokenBucketFlow(SlockDatabase database, byte[] flowKey, UInt16 count, UInt32 timeout, double period)
+        public TokenBucketFlow(SlockDatabase database, byte[] flowKey, ushort count, uint timeout, double period)
         {
             this.database = database;
             if (flowKey.Length > 16)
@@ -32,17 +31,17 @@ namespace slock4net
                 this.flowKey = new byte[16];
                 Array.Copy(flowKey, 0, this.flowKey, 16 - flowKey.Length, flowKey.Length);
             }
-            this.count = (UInt16)(count > 0 ? count - 1 : 0);
+            this.count = (ushort)(count > 0 ? count - 1 : 0);
             this.timeout = timeout;
             this.period = period;
         }
 
-        public TokenBucketFlow(SlockDatabase database, string flowKey, UInt16 count, UInt32 timeout, double period) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, period)
+        public TokenBucketFlow(SlockDatabase database, string flowKey, ushort count, uint timeout, double period) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, period)
         {
 
         }
 
-        public void SetExpriedFlag(UInt32 expriedFlag)
+        public void SetExpriedFlag(uint expriedFlag)
         {
             this.expriedFlag = expriedFlag;
         }
@@ -53,8 +52,8 @@ namespace slock4net
             {
                 lock (this)
                 {
-                    UInt32 expried = (UInt32)Math.Ceiling(period * 1000) | 0x04000000;
-                    expried = expried | (expriedFlag << 16);
+                    uint expried = (uint)Math.Ceiling(period * 1000) | 0x04000000;
+                    expried |= (expriedFlag << 16);
                     flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, 0);
                 }
                 flowLock.Acquire();
@@ -64,8 +63,8 @@ namespace slock4net
             lock (this)
             {
                 long now = (new DateTimeOffset(DateTime.Now)).ToUnixTimeSeconds();
-                UInt32 expried = (UInt32)(((long)Math.Ceiling(period)) - (now % ((long)Math.Ceiling((period)))));
-                expried = expried | (expriedFlag << 16);
+                uint expried = (uint)(((long)Math.Ceiling(period)) - (now % ((long)Math.Ceiling((period)))));
+                expried |= (expriedFlag << 16);
                 flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), 0, expried, count, 0);
             }
 
@@ -75,8 +74,8 @@ namespace slock4net
             }
             catch (LockTimeoutException)
             {
-                UInt32 expried = (UInt32)Math.Ceiling(period);
-                expried = expried | (expriedFlag << 16);
+                uint expried = (uint)Math.Ceiling(period);
+                expried |= (expriedFlag << 16);
                 flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, 0);
                 flowLock.Acquire();
             }

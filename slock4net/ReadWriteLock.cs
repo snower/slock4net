@@ -1,12 +1,8 @@
 using slock4net.Commands;
-using slock4net.Exceptions;
 using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 
 namespace slock4net
 {
@@ -14,12 +10,12 @@ namespace slock4net
     {
         private SlockDatabase database;
         private byte[] lockKey;
-        private UInt32 timeout;
-        private UInt32 expried;
+        private uint timeout;
+        private uint expried;
         private LinkedList<Lock> readLocks;
         private Lock writeLock;
 
-        public ReadWriteLock(SlockDatabase database, byte[] lockKey, UInt32 timeout, UInt32 expried)
+        public ReadWriteLock(SlockDatabase database, byte[] lockKey, uint timeout, uint expried)
         {
             this.database = database;
             if (lockKey.Length > 16)
@@ -39,7 +35,7 @@ namespace slock4net
             this.readLocks = new LinkedList<Lock>();
         }
 
-        public ReadWriteLock(SlockDatabase database, string lockKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(lockKey), timeout, expried)
+        public ReadWriteLock(SlockDatabase database, string lockKey, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(lockKey), timeout, expried)
         {
 
         }

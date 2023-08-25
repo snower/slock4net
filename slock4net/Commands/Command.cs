@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace slock4net.Commands
 {
@@ -114,7 +112,7 @@ namespace slock4net.Commands
 
             try
             {
-                return this.waiter.WaitOne(5000);
+                return this.waiter.WaitOne(120000);
             }
             catch (Exception)
             {

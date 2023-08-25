@@ -1,14 +1,10 @@
 using slock4net.Commands;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
 namespace slock4net.Exceptions
 {
     public class LockException : SlockException
     {
-        static String[] ERROR_MSG = new String[]{
+        static string[] ERROR_MSG = new string[]{
             "OK",
             "UNKNOWN_MAGIC",
             "UNKNOWN_VERSION",
@@ -32,7 +28,7 @@ namespace slock4net.Exceptions
             this.commandResult = commandResult;
         }
 
-        protected static String GetErrMessage(CommandResult commandResult)
+        protected static string GetErrMessage(CommandResult commandResult)
         {
             if (commandResult == null)
             {

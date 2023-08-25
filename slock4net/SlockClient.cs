@@ -1,22 +1,37 @@
 ﻿using slock4net.Commands;
 using slock4net.Exceptions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 
 namespace slock4net
 {
     public class SlockClient : ISlockClient
     {
+        private static readonly char[] DIGITS_LOWER = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+
+        private static string EncodeHex(byte[] data)
+        {
+            int l = data.Length;
+            char[] outStr = new char[l << 1];
+            for (int i = 0, j = 0; i < l; i++)
+            {
+                outStr[j++] = DIGITS_LOWER[(240 & data[i]) >> 4];
+                outStr[j++] = DIGITS_LOWER[15 & data[i]];
+            }
+            return new string(outStr);
+        }
+
         protected string host;
         protected int port;
         protected Socket socket;
         protected Thread thread;
         protected SlockDatabase[] databases;
-        protected Dictionary<String, Command> requests;
+        protected ConcurrentDictionary<string, Command> requests;
         protected SlockReplsetClient replsetClient;
         protected byte[] clientId;
         protected bool closed = false;
@@ -34,21 +49,21 @@ namespace slock4net
             this.host = host;
             this.port = port;
             this.databases = new SlockDatabase[256];
-            this.requests = new Dictionary<String, Command>();
+            this.requests = new ConcurrentDictionary<string, Command>();
         }
 
-        public SlockClient(String host, int port, SlockReplsetClient replsetClient, SlockDatabase[] databases)
+        public SlockClient(string host, int port, SlockReplsetClient replsetClient, SlockDatabase[] databases)
         {
             this.host = host;
             this.port = port;
             this.replsetClient = replsetClient;
             this.databases = databases;
-            this.requests = new Dictionary<String, Command>();
+            this.requests = new ConcurrentDictionary<string, Command>();
         }
 
         public void Open()
         {
-            if (this.socket != null)
+            if (this.thread != null)
             {
                 return;
             }
@@ -63,7 +78,7 @@ namespace slock4net
         {
             try
             {
-                if(this.socket != null)
+                if(this.thread != null)
                 {
                     return this;
                 }
@@ -97,10 +112,10 @@ namespace slock4net
 
             lock (this)
             {
-                foreach (string requestId in this.requests.Keys)
+                foreach (string requestId in this.requests.Keys.ToArray())
                 {
                     Command command = this.requests[requestId];
-                    this.requests.Remove(requestId);
+                    this.requests.Remove(requestId, out Command c);
                     if (command == null)
                     {
                         continue;
@@ -152,10 +167,10 @@ namespace slock4net
             }
 
             this.socket.NoDelay = true;
-            this.InitClient();
+            InitCommandResult initCommandResult = this.InitClient();
             if (this.replsetClient != null)
             {
-                replsetClient.AddLivedClient(this);
+                replsetClient.AddLivedClient(this, initCommandResult.InitType == 1);
             }
         }
 
@@ -163,10 +178,10 @@ namespace slock4net
         {
             lock (this)
             {
-                foreach (String requestId in this.requests.Keys)
+                foreach (string requestId in this.requests.Keys.ToArray())
                 {
                     Command command = this.requests[requestId];
-                    this.requests.Remove(requestId);
+                    this.requests.Remove(requestId, out Command c);
                     if (command == null)
                     {
                         continue;
@@ -213,7 +228,7 @@ namespace slock4net
             }
         }
 
-        protected void InitClient()
+        protected InitCommandResult InitClient()
         {
             if (clientId == null)
             {
@@ -255,6 +270,7 @@ namespace slock4net
                         throw new SocketException(-2);
                     }
                 }
+                return initCommandResult;
             }
             catch (Exception e)
             {
@@ -341,13 +357,13 @@ namespace slock4net
 
         protected void HandleCommand(CommandResult commandResult)
         {
-            String requestId = Encoding.Unicode.GetString(commandResult.GetRequestId());
+            string requestId = EncodeHex(commandResult.GetRequestId());
             if (!this.requests.ContainsKey(requestId))
             {
                 return;
             }
             Command command = this.requests[requestId];
-            this.requests.Remove(requestId);
+            this.requests.Remove(requestId, out Command c);
             if (command == null)
             {
                 return;
@@ -369,7 +385,7 @@ namespace slock4net
                 throw new ClientCommandException();
             }
 
-            String requestId = Encoding.Unicode.GetString(command.GetRequestId());
+            string requestId = EncodeHex(command.GetRequestId());
             lock (this)
             {
                 if (this.socket == null)
@@ -377,7 +393,7 @@ namespace slock4net
                     throw new ClientUnconnectException();
                 }
 
-                this.requests.Add(requestId, command);
+                this.requests.GetOrAdd(requestId, command);
                 try
                 {
                     int n = this.socket.Send(buf);
@@ -397,7 +413,7 @@ namespace slock4net
                 }
                 catch (SocketException)
                 {
-                    this.requests.Remove(requestId);
+                    this.requests.Remove(requestId, out Command c);
                     try
                     {
                         this.socket.Close();
@@ -411,7 +427,7 @@ namespace slock4net
 
             if (!command.WaitWaiter())
             {
-                this.requests.Remove(requestId);
+                this.requests.Remove(requestId, out Command c);
                 throw new ClientCommandTimeoutException();
             }
 
@@ -420,6 +436,17 @@ namespace slock4net
                 throw new ClientClosedException();
             }
             return command.CommandResult;
+        }
+
+        public bool Ping()
+        {
+            PingCommand pingCommand = new PingCommand();
+            PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
+            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
+            {
+                return true;
+            }
+            return false;
         }
 
         public SlockDatabase SelectDatabase(byte databaseId)
@@ -435,17 +462,6 @@ namespace slock4net
                 }
             }
             return this.databases[databaseId];
-        }
-
-        public bool Ping()
-        {
-            PingCommand pingCommand = new PingCommand();
-            PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
-            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
-            {
-                return true;
-            }
-            return false;
         }
 
         public Lock NewLock(byte[] lockKey, uint timeout, uint expried)
@@ -516,6 +532,36 @@ namespace slock4net
         public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
+        }
+
+        public GroupEvent newGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
+        }
+
+        public GroupEvent newGroupEvent(string groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }
     }
 }

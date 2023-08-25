@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+﻿using System.IO;
 
 namespace slock4net.Commands
 {
@@ -11,8 +8,8 @@ namespace slock4net.Commands
         public byte DatabaseId { get; protected set; }
         public byte[] LockId { get; protected set; }
         public byte[] LockKey { get; protected set; }
-        public UInt16 LCount { get; protected set; }
-        public UInt16 Count { get; protected set; }
+        public ushort LCount { get; protected set; }
+        public ushort Count { get; protected set; }
         public byte LRCount { get; protected set; }
         public byte RCount { get; protected set; }
 
@@ -63,8 +60,8 @@ namespace slock4net.Commands
                     this.DatabaseId = br.ReadByte();
                     this.LockId = br.ReadBytes(16);
                     this.LockKey = br.ReadBytes(16);
-                    this.LCount = (UInt16)(((UInt16)br.ReadByte()) | (((UInt16)br.ReadByte()) << 8));
-                    this.Count = (UInt16)(((UInt16)br.ReadByte()) | (((UInt16)br.ReadByte()) << 8));
+                    this.LCount = (ushort)(((ushort)br.ReadByte()) | (((ushort)br.ReadByte()) << 8));
+                    this.Count = (ushort)(((ushort)br.ReadByte()) | (((ushort)br.ReadByte()) << 8));
                     this.LRCount = (byte)br.ReadByte();
                     this.RCount = (byte)br.ReadByte();
                 }

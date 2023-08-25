@@ -1,12 +1,8 @@
 using slock4net.Commands;
 using slock4net.Exceptions;
 using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 
 namespace slock4net
 {
@@ -14,14 +10,14 @@ namespace slock4net
     {
         private SlockDatabase database;
         private byte[] eventKey;
-        private UInt32 timeout;
-        private UInt32 expried;
+        private uint timeout;
+        private uint expried;
         private Lock eventLock;
         private Lock checkLock;
         private Lock waitLock;
         private bool defaultSeted;
 
-        public Event(SlockDatabase database, byte[] eventKey, UInt32 timeout, UInt32 expried, bool defaultSeted)
+        public Event(SlockDatabase database, byte[] eventKey, uint timeout, uint expried, bool defaultSeted)
         {
             this.database = database;
             if (eventKey.Length > 16)
@@ -41,16 +37,16 @@ namespace slock4net
             this.defaultSeted = defaultSeted;
         }
 
-        public Event(SlockDatabase database, byte[] eventKey, UInt32 timeout, UInt32 expried) : this(database, eventKey, timeout, expried, true)
+        public Event(SlockDatabase database, byte[] eventKey, uint timeout, uint expried) : this(database, eventKey, timeout, expried, true)
         {
         }
 
-        public Event(SlockDatabase database, string eventKey, UInt32 timeout, UInt32 expried, bool defaultSeted) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, defaultSeted)
+        public Event(SlockDatabase database, string eventKey, uint timeout, uint expried, bool defaultSeted) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, defaultSeted)
         {
 
         }
 
-        public Event(SlockDatabase database, string eventKey, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, true)
+        public Event(SlockDatabase database, string eventKey, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(eventKey), timeout, expried, true)
         {
         }
 
@@ -172,7 +168,7 @@ namespace slock4net
             return true;
         }
 
-        public void Wait(UInt32 timeout)
+        public void Wait(uint timeout)
         {
             if (defaultSeted)
             {
@@ -221,7 +217,7 @@ namespace slock4net
             }
         }
 
-        public void WaitAndTimeoutRetryClear(UInt32 timeout)
+        public void WaitAndTimeoutRetryClear(uint timeout)
         {
             if (defaultSeted)
             {

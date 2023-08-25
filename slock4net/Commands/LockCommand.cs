@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace slock4net.Commands
 {
@@ -12,12 +10,12 @@ namespace slock4net.Commands
         public byte DatabaseId { get; protected set; }
         public byte[] LockId { get; protected set; }
         public byte[] LockKey { get; protected set; }
-        public UInt32 Timeout { get; protected set; }
-        public UInt32 Expried { get; protected set; }
-        public UInt16 Count { get; protected set; }
+        public uint Timeout { get; protected set; }
+        public uint Expried { get; protected set; }
+        public ushort Count { get; protected set; }
         public byte RCount { get; protected set; }
         public LockCommand(byte commandType, byte flag, byte datbaseId, byte[] lockKey, byte[] lockId,
-            UInt32 timeout, UInt32 expried, UInt16 count, byte rCount) : base(commandType)
+            uint timeout, uint expried, ushort count, byte rCount) : base(commandType)
         {
             this.Flag = flag;
             this.DatabaseId = datbaseId;
@@ -73,11 +71,11 @@ namespace slock4net.Commands
                     this.DatabaseId = br.ReadByte();
                     this.LockId = br.ReadBytes(16);
                     this.LockKey = br.ReadBytes(16);
-                    this.Timeout = ((UInt32)br.ReadByte()) | (((UInt32)br.ReadByte()) << 8) | (((UInt32)br.ReadByte()) << 16) 
-                        | (((UInt32)br.ReadByte()) << 24);
-                    this.Expried = ((UInt32)br.ReadByte()) | (((UInt32)br.ReadByte()) << 8) | (((UInt32)br.ReadByte()) << 16)
-                        | (((UInt32)br.ReadByte()) << 24);
-                    this.Count = (UInt16)(((UInt16)br.ReadByte()) | (((UInt16)br.ReadByte()) << 8));
+                    this.Timeout = ((uint)br.ReadByte()) | (((uint)br.ReadByte()) << 8) | (((uint)br.ReadByte()) << 16) 
+                        | (((uint)br.ReadByte()) << 24);
+                    this.Expried = ((uint)br.ReadByte()) | (((uint)br.ReadByte()) << 8) | (((uint)br.ReadByte()) << 16)
+                        | (((uint)br.ReadByte()) << 24);
+                    this.Count = (ushort)(((ushort)br.ReadByte()) | (((ushort)br.ReadByte()) << 8));
                     this.RCount = (byte)br.ReadByte();
                 }
             }
@@ -123,7 +121,7 @@ namespace slock4net.Commands
 
             try
             {
-                return this.waiter.WaitOne(((int)(this.Timeout & 0xffff) + 1) * 1000);
+                return this.waiter.WaitOne(((int)(this.Timeout & 0xffff) + 120) * 1000);
             }
             catch (Exception)
             {

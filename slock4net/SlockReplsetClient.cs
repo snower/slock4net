@@ -2,19 +2,19 @@
 using slock4net.Exceptions;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace slock4net
 {
     public class SlockReplsetClient : ISlockClient
     {
-        protected String[] hosts;
+        protected string[] hosts;
         protected LinkedList<SlockClient> clients;
         protected LinkedList<SlockClient> livedClients;
+        private volatile SlockClient livedLeaderClient;
         protected bool closed;
         protected SlockDatabase[] databases;
 
-        public SlockReplsetClient(String[] hosts)
+        public SlockReplsetClient(string[] hosts)
         {
             this.hosts = hosts;
             this.clients = new LinkedList<SlockClient>();
@@ -22,11 +22,12 @@ namespace slock4net
             this.closed = false;
             this.databases = new SlockDatabase[256];
         }
+
         public void Open()
         {
-            foreach (String host in this.hosts)
+            foreach (string host in this.hosts)
             {
-                String[] hostInfo = host.Split(":");
+                string[] hostInfo = host.StartsWith("[") && host.Contains("]:") ? host.Substring(1).Split("]:") : host.Split(":");
                 if (hostInfo.Length != 2)
                 {
                     continue;
@@ -35,6 +36,11 @@ namespace slock4net
                 SlockClient client = new SlockClient(hostInfo[0], Convert.ToInt32(hostInfo[1]), this, databases);
                 this.clients.AddLast(client);
                 client.TryOpen();
+            }
+
+            if (clients.Count <= 0)
+            {
+                throw new ClientUnconnectException();
             }
         }
 
@@ -59,11 +65,15 @@ namespace slock4net
             }
         }
 
-        public void AddLivedClient(SlockClient client)
+        public void AddLivedClient(SlockClient client, bool isLeader)
         {
             lock (this)
             {
                 this.livedClients.AddLast(client);
+                if (isLeader)
+                {
+                    this.livedLeaderClient = client;
+                }
             }
         }
 
@@ -72,6 +82,10 @@ namespace slock4net
             lock (this)
             {
                 this.livedClients.Remove(client);
+                if (client == this.livedLeaderClient)
+                {
+                    this.livedLeaderClient = null;
+                }
             }
         }
 
@@ -82,12 +96,29 @@ namespace slock4net
                 throw new ClientClosedException();
             }
 
+            SlockClient livedLeaderClient = this.livedLeaderClient;
+            if (livedLeaderClient != null)
+            {
+                return livedLeaderClient.SendCommand(command);
+            }
+
             LinkedListNode<SlockClient> firstNode = livedClients.First;
             if(firstNode == null || firstNode.Value == null)
             {
                 throw new ClientUnconnectException();
             }
             return firstNode.Value.SendCommand(command);
+        }
+
+        public bool Ping()
+        {
+            PingCommand pingCommand = new PingCommand();
+            PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
+            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
+            {
+                return true;
+            }
+            return false;
         }
 
         public SlockDatabase SelectDatabase(byte databaseId)
@@ -103,17 +134,6 @@ namespace slock4net
                 }
             }
             return this.databases[databaseId];
-        }
-
-        public bool Ping()
-        {
-            PingCommand pingCommand = new PingCommand();
-            PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
-            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
-            {
-                return true;
-            }
-            return false;
         }
 
         public Lock NewLock(byte[] lockKey, uint timeout, uint expried)
@@ -184,6 +204,36 @@ namespace slock4net
         public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
+        }
+
+        public GroupEvent newGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
+        }
+
+        public GroupEvent newGroupEvent(string groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(byte[] lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
+        }
+
+        public TreeLock newTreeLock(string lockKey, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }
     }
 }

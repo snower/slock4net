@@ -1,12 +1,7 @@
 using slock4net.Commands;
-using slock4net.Exceptions;
 using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 
 namespace slock4net
 {
@@ -14,12 +9,12 @@ namespace slock4net
     {
         private SlockDatabase database;
         private byte[] flowKey;
-        private UInt16 count;
-        private UInt32 timeout;
-        private UInt32 expried;
+        private ushort count;
+        private uint timeout;
+        private uint expried;
         private Lock flowLock;
 
-        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, UInt16 count, UInt32 timeout, UInt32 expried)
+        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, ushort count, uint timeout, uint expried)
         {
             this.database = database;
             if (flowKey.Length > 16)
@@ -34,16 +29,16 @@ namespace slock4net
                 this.flowKey = new byte[16];
                 Array.Copy(flowKey, 0, this.flowKey, 16 - flowKey.Length, flowKey.Length);
             }
-            this.count = (UInt16)(count == 0 ? 0 : (UInt16)(count - 1));
+            this.count = (ushort)(count == 0 ? 0 : (ushort)(count - 1));
             this.timeout = timeout;
             this.expried = expried;
         }
 
-        public MaxConcurrentFlow(SlockDatabase database, string flowKey, UInt16 count, UInt32 timeout, UInt32 expried) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried)
+        public MaxConcurrentFlow(SlockDatabase database, string flowKey, ushort count, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried)
         {
         }
 
-            public void Acquire()
+        public void Acquire()
         {
             if (flowLock == null)
             {
