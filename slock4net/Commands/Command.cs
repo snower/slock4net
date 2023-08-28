@@ -1,5 +1,8 @@
-﻿using System;
+﻿using slock4net.Exceptions;
+using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace slock4net.Commands
 {
@@ -12,6 +15,9 @@ namespace slock4net.Commands
         public byte[] RequestId { get; protected set; }
 
         protected System.Threading.Semaphore waiter;
+        protected TaskCompletionSource<bool> taskCompletionSource;
+        protected CancellationTokenSource timeoutCancellationTokenSource;
+
         public CommandResult CommandResult;
         public Command(byte commandType)
         {
@@ -118,6 +124,45 @@ namespace slock4net.Commands
             {
                 return false;
             }
+        }
+
+        public virtual bool CreateTask()
+        {
+            this.taskCompletionSource = new TaskCompletionSource<bool>();
+            this.timeoutCancellationTokenSource = new CancellationTokenSource();
+            return true;
+        }
+
+        public virtual bool WakeupTask()
+        {
+            if (this.taskCompletionSource == null)
+            {
+                return false;
+            }
+
+            Task.Run(() =>
+            {
+                if (!this.timeoutCancellationTokenSource.IsCancellationRequested)
+                {
+                    this.timeoutCancellationTokenSource.Cancel();
+                }
+                this.taskCompletionSource.SetResult(true);
+            });
+            return true;
+        }
+
+        public virtual Task<bool> WaitTask()
+        {
+            if (this.taskCompletionSource == null)
+            {
+                return null;
+            }
+            Task.Delay(120000, this.timeoutCancellationTokenSource.Token).ContinueWith(t =>
+            {
+                if (t.Status == TaskStatus.Canceled) return;
+                this.taskCompletionSource.SetException(new ClientCommandTimeoutException());
+            });
+            return this.taskCompletionSource.Task;
         }
     }
 }

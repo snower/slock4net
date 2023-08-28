@@ -2,6 +2,7 @@ using slock4net.Commands;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -53,6 +54,21 @@ namespace slock4net
             flowLock.Acquire();
         }
 
+        public async Task AcquireAsync()
+        {
+            if (flowLock == null)
+            {
+                lock (this)
+                {
+                    if (flowLock == null)
+                    {
+                        flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                    }
+                }
+            }
+            await flowLock.AcquireAsync();
+        }
+
         public void Release()
         {
             if (flowLock == null)
@@ -66,6 +82,21 @@ namespace slock4net
                 }
             }
             flowLock.Release();
+        }
+
+        public async Task ReleaseAsync()
+        {
+            if (flowLock == null)
+            {
+                lock (this)
+                {
+                    if (flowLock == null)
+                    {
+                        flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                    }
+                }
+            }
+            await flowLock.ReleaseAsync();
         }
     }
 }

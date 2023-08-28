@@ -3,6 +3,7 @@ using slock4net.Exceptions;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -78,6 +79,41 @@ namespace slock4net
                 expried |= (expriedFlag << 16);
                 flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, 0);
                 flowLock.Acquire();
+            }
+        }
+
+        public async Task AcquireAsync()
+        {
+            if (period < 3)
+            {
+                lock (this)
+                {
+                    uint expried = (uint)Math.Ceiling(period * 1000) | 0x04000000;
+                    expried |= (expriedFlag << 16);
+                    flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, 0);
+                }
+                await flowLock.AcquireAsync();
+                return;
+            }
+
+            lock (this)
+            {
+                long now = (new DateTimeOffset(DateTime.Now)).ToUnixTimeSeconds();
+                uint expried = (uint)(((long)Math.Ceiling(period)) - (now % ((long)Math.Ceiling((period)))));
+                expried |= (expriedFlag << 16);
+                flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), 0, expried, count, 0);
+            }
+
+            try
+            {
+                await flowLock.AcquireAsync();
+            }
+            catch (LockTimeoutException)
+            {
+                uint expried = (uint)Math.Ceiling(period);
+                expried |= (expriedFlag << 16);
+                flowLock = new Lock(database, flowKey, LockCommand.GenLockId(), timeout, expried, count, 0);
+                await flowLock.AcquireAsync();
             }
         }
     }

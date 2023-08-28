@@ -2,6 +2,7 @@ using slock4net.Commands;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -48,6 +49,18 @@ namespace slock4net
             reentrantLock.Acquire();
         }
 
+        public async Task AcquireAsync()
+        {
+            lock (this)
+            {
+                if (reentrantLock == null)
+                {
+                    reentrantLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0, 0xff);
+                }
+            }
+            await reentrantLock.AcquireAsync();
+        }
+
         public void Release()
         {
             lock (this)
@@ -58,6 +71,18 @@ namespace slock4net
                 }
             }
             reentrantLock.Release();
+        }
+
+        public async Task ReleaseAsync()
+        {
+            lock (this)
+            {
+                if (reentrantLock == null)
+                {
+                    reentrantLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0, 0xff);
+                }
+            }
+            await reentrantLock.ReleaseAsync();
         }
     }
 }

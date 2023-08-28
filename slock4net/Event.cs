@@ -3,6 +3,7 @@ using slock4net.Exceptions;
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -87,6 +88,43 @@ namespace slock4net
             }
         }
 
+        public async Task ClearAsync()
+        {
+            if (defaultSeted)
+            {
+                lock (this)
+                {
+                    if (eventLock == null)
+                    {
+                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                    }
+                }
+                try
+                {
+                    await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                }
+                catch (LockLockedException)
+                {
+                }
+                return;
+            }
+
+            lock (this)
+            {
+                if (eventLock == null)
+                {
+                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                }
+            }
+            try
+            {
+                await eventLock.ReleaseAsync();
+            }
+            catch (LockUnlockedException)
+            {
+            }
+        }
+
         public void Set()
         {
             if (defaultSeted)
@@ -118,6 +156,43 @@ namespace slock4net
             try
             {
                 eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+            }
+            catch (LockLockedException)
+            {
+            }
+        }
+
+        public async Task SetAsync()
+        {
+            if (defaultSeted)
+            {
+                lock (this)
+                {
+                    if (eventLock == null)
+                    {
+                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                    }
+                }
+                try
+                {
+                    await eventLock.ReleaseAsync();
+                }
+                catch (LockUnlockedException)
+                {
+                }
+                return;
+            }
+
+            lock (this)
+            {
+                if (eventLock == null)
+                {
+                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                }
+            }
+            try
+            {
+                await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
             }
             catch (LockLockedException)
             {
@@ -168,6 +243,50 @@ namespace slock4net
             return true;
         }
 
+        public async Task<bool> IsSetAsync()
+        {
+            if (defaultSeted)
+            {
+                lock (this)
+                {
+                    if (checkLock == null)
+                    {
+                        checkLock = new Lock(database, eventKey, null, 0, 0, 0, 0);
+                    }
+                }
+                try
+                {
+                    await checkLock.AcquireAsync();
+                }
+                catch (LockTimeoutException)
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            lock (this)
+            {
+                if (checkLock == null)
+                {
+                    checkLock = new Lock(database, eventKey, null, 0x02000000, 0, 1, 0);
+                }
+            }
+            try
+            {
+                await checkLock.AcquireAsync();
+            }
+            catch (LockNotOwnException)
+            {
+                return false;
+            }
+            catch (LockTimeoutException)
+            {
+                return false;
+            }
+            return true;
+        }
+
         public void Wait(uint timeout)
         {
             if (defaultSeted)
@@ -206,6 +325,55 @@ namespace slock4net
             try
             {
                 waitLock.Acquire();
+            }
+            catch (LockTimeoutException)
+            {
+                throw new EventWaitTimeoutException();
+            }
+            catch (ClientCommandTimeoutException)
+            {
+                throw new EventWaitTimeoutException();
+            }
+        }
+
+        public async Task WaitAsync(uint timeout)
+        {
+            if (defaultSeted)
+            {
+                lock (this)
+                {
+                    if (waitLock == null)
+                    {
+                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                    }
+                }
+
+                try
+                {
+                    await waitLock.AcquireAsync();
+                }
+                catch (LockTimeoutException)
+                {
+                    throw new EventWaitTimeoutException();
+                }
+                catch (ClientCommandTimeoutException)
+                {
+                    throw new EventWaitTimeoutException();
+                }
+                return;
+            }
+
+            lock (this)
+            {
+                if (waitLock == null)
+                {
+                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                }
+            }
+
+            try
+            {
+                await waitLock.AcquireAsync();
             }
             catch (LockTimeoutException)
             {
@@ -289,6 +457,84 @@ namespace slock4net
             try
             {
                 eventLock.Release();
+            }
+            catch (SlockException)
+            {
+            }
+        }
+
+        public async Task WaitAndTimeoutRetryClearAsync(uint timeout)
+        {
+            if (defaultSeted)
+            {
+                lock (this)
+                {
+                    if (waitLock == null)
+                    {
+                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                    }
+                }
+
+                try
+                {
+                    await waitLock.AcquireAsync();
+                }
+                catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
+                {
+                    lock (this)
+                    {
+                        if (eventLock == null)
+                        {
+                            eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 0, 0);
+                        }
+                    }
+
+                    try
+                    {
+                        await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                        try
+                        {
+                            await eventLock.ReleaseAsync();
+                        }
+                        catch (SlockException)
+                        {
+                        }
+                        return;
+                    }
+                    catch (SlockException)
+                    {
+                    }
+                    throw new EventWaitTimeoutException();
+                }
+                return;
+            }
+
+            lock (this)
+            {
+                if (waitLock == null)
+                {
+                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                }
+            }
+            try
+            {
+                await waitLock.AcquireAsync();
+            }
+            catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
+            {
+                throw new EventWaitTimeoutException();
+            }
+
+            lock (this)
+            {
+                if (eventLock == null)
+                {
+                    eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 1, 0);
+                }
+            }
+            try
+            {
+                await eventLock.ReleaseAsync();
             }
             catch (SlockException)
             {

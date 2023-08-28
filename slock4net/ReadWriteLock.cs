@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -52,6 +53,18 @@ namespace slock4net
             writeLock.Acquire();
         }
 
+        public async Task AcquireWriteAsync()
+        {
+            lock (this)
+            {
+                if (writeLock == null)
+                {
+                    writeLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0, 0);
+                }
+            }
+            await writeLock.AcquireAsync();
+        }
+
         public void ReleaseWrite()
         {
             lock (this)
@@ -64,10 +77,32 @@ namespace slock4net
             writeLock.Release();
         }
 
+        public async Task ReleaseWriteAsync()
+        {
+            lock (this)
+            {
+                if (writeLock == null)
+                {
+                    writeLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0, 0);
+                }
+            }
+            await writeLock.ReleaseAsync();
+        }
+
         public void AcquireRead()
         {
             Lock readLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0xffff, 0);
             readLock.Acquire();
+            lock (this)
+            {
+                readLocks.AddLast(readLock);
+            }
+        }
+
+        public async Task AcquireReadAsync()
+        {
+            Lock readLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, 0xffff, 0);
+            await readLock.AcquireAsync();
             lock (this)
             {
                 readLocks.AddLast(readLock);
@@ -95,14 +130,45 @@ namespace slock4net
             readLock.Release();
         }
 
+        public async Task ReleaseReadAsync()
+        {
+            Lock readLock;
+            lock (this)
+            {
+                readLock = readLocks.First.Value;
+                if (readLock == null)
+                {
+                    return;
+                }
+                try
+                {
+                    readLocks.RemoveFirst();
+                }
+                catch (InvalidProgramException)
+                {
+                }
+            }
+            await readLock.ReleaseAsync();
+        }
+
         public void Acquire()
         {
             this.AcquireWrite();
         }
 
+        public async Task AcquireAsync()
+        {
+            await this.AcquireWriteAsync();
+        }
+
         public void Release()
         {
             this.ReleaseWrite();
+        }
+
+        public async Task ReleaseAsync()
+        {
+            await this.ReleaseWriteAsync();
         }
     }
 }

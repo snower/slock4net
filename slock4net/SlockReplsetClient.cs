@@ -2,6 +2,7 @@
 using slock4net.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -44,6 +45,25 @@ namespace slock4net
             }
         }
 
+        public Task OpenAsync()
+        {
+            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    this.Open();
+                }
+                catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                    return;
+                }
+                taskCompletionSource.SetResult(true);
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
+        }
+
         public ISlockClient TryOpen()
         {
             try
@@ -56,6 +76,23 @@ namespace slock4net
             return this;
         }
 
+        public Task<ISlockClient> TryOpenAsync()
+        {
+            TaskCompletionSource<ISlockClient> taskCompletionSource = new TaskCompletionSource<ISlockClient>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    taskCompletionSource.SetResult(this.TryOpen());
+                }
+                catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                }
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
+        }
+
         public void Close()
         {
             this.closed = true;
@@ -64,6 +101,26 @@ namespace slock4net
                 client.Close();
             }
         }
+
+        public Task CloseAsync()
+        {
+            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                    return;
+                }
+                taskCompletionSource.SetResult(true);
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
+        }
+
 
         public void AddLivedClient(SlockClient client, bool isLeader)
         {
@@ -110,10 +167,43 @@ namespace slock4net
             return firstNode.Value.SendCommand(command);
         }
 
+        public async Task<CommandResult> SendCommandAsync(Command command)
+        {
+            if (this.closed)
+            {
+                throw new ClientClosedException();
+            }
+
+            SlockClient livedLeaderClient = this.livedLeaderClient;
+            if (livedLeaderClient != null)
+            {
+                return await livedLeaderClient.SendCommandAsync(command);
+            }
+
+            LinkedListNode<SlockClient> firstNode = livedClients.First;
+            if (firstNode == null || firstNode.Value == null)
+            {
+                throw new ClientUnconnectException();
+            }
+            return await firstNode.Value.SendCommandAsync(command);
+        }
+
+
         public bool Ping()
         {
             PingCommand pingCommand = new PingCommand();
             PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
+            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<bool> PingAsync()
+        {
+            PingCommand pingCommand = new PingCommand();
+            PingCommandResult pingCommandResult = (PingCommandResult) await this.SendCommandAsync(pingCommand);
             if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
             {
                 return true;
@@ -206,7 +296,7 @@ namespace slock4net
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
         }
 
-        public GroupEvent newGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        public GroupEvent NewGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }
@@ -216,22 +306,22 @@ namespace slock4net
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }
 
-        public TreeLock newTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(byte[] lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(byte[] lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(string lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }

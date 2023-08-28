@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -74,6 +75,24 @@ namespace slock4net
             this.thread.Start();
         }
 
+        public Task OpenAsync()
+        {
+            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    this.Open();
+                } catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                    return;
+                }
+                taskCompletionSource.SetResult(true);
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
+        }
+
         public ISlockClient TryOpen()
         {
             try
@@ -94,6 +113,23 @@ namespace slock4net
             this.thread.IsBackground = true;
             this.thread.Start();
             return this;
+        }
+
+        public Task<ISlockClient> TryOpenAsync()
+        {
+            TaskCompletionSource<ISlockClient> taskCompletionSource = new TaskCompletionSource<ISlockClient>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    taskCompletionSource.SetResult(this.TryOpen());
+                }
+                catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                }
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
         }
 
         public void Close()
@@ -121,7 +157,10 @@ namespace slock4net
                         continue;
                     }
                     command.CommandResult = null;
-                    command.WakeupWaiter();
+                    if (!command.WakeupWaiter())
+                    {
+                        command.WakeupTask();
+                    }
                 }
 
                 for (int i = 0; i < databases.Length; i++)
@@ -133,6 +172,25 @@ namespace slock4net
                     databases[i] = null;
                 }
             }
+        }
+
+        public Task CloseAsync()
+        {
+            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    this.Close();
+                }
+                catch (Exception ex)
+                {
+                    taskCompletionSource.SetException(ex);
+                    return;
+                }
+                taskCompletionSource.SetResult(true);
+            }, TaskCreationOptions.LongRunning);
+            return taskCompletionSource.Task;
         }
 
         protected void Connect()
@@ -187,7 +245,10 @@ namespace slock4net
                         continue;
                     }
                     command.CommandResult = null;
-                    command.WakeupWaiter();
+                    if (!command.WakeupWaiter())
+                    {
+                        command.WakeupTask();
+                    }
                 }
             }
 
@@ -369,7 +430,10 @@ namespace slock4net
                 return;
             }
             command.CommandResult = commandResult;
-            command.WakeupWaiter();
+            if (!command.WakeupWaiter())
+            {
+                command.WakeupTask();
+            }
         }
 
         public CommandResult SendCommand(Command command)
@@ -438,10 +502,89 @@ namespace slock4net
             return command.CommandResult;
         }
 
+        public async Task<CommandResult> SendCommandAsync(Command command)
+        {
+            if (this.closed)
+            {
+                throw new ClientClosedException();
+            }
+
+            byte[] buf = command.DumpCommand();
+            if (!command.CreateTask())
+            {
+                throw new ClientCommandException();
+            }
+
+            string requestId = EncodeHex(command.GetRequestId());
+            lock (this)
+            {
+                if (this.socket == null)
+                {
+                    throw new ClientUnconnectException();
+                }
+
+                this.requests.GetOrAdd(requestId, command);
+                try
+                {
+                    int n = this.socket.Send(buf);
+                    while (n > 0 && n < 64)
+                    {
+                        int nn = this.socket.Send(buf, n, 64 - n, SocketFlags.None);
+                        if (nn <= 0)
+                        {
+                            break;
+                        }
+                        n += nn;
+                    }
+                    if (n < 64)
+                    {
+                        throw new ClientOutputStreamException();
+                    }
+                }
+                catch (SocketException)
+                {
+                    this.requests.Remove(requestId, out Command c);
+                    try
+                    {
+                        this.socket.Close();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    throw new ClientOutputStreamException();
+                }
+            }
+
+            Task<bool> task = command.WaitTask();
+            if (task == null)
+            {
+                this.requests.Remove(requestId, out Command c);
+                throw new ClientCommandTimeoutException();
+            }
+
+            await task;
+            if (command.CommandResult == null)
+            {
+                throw new ClientClosedException();
+            }
+            return command.CommandResult;
+        }
+
         public bool Ping()
         {
             PingCommand pingCommand = new PingCommand();
             PingCommandResult pingCommandResult = (PingCommandResult)this.SendCommand(pingCommand);
+            if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public async Task<bool> PingAsync()
+        {
+            PingCommand pingCommand = new PingCommand();
+            PingCommandResult pingCommandResult = (PingCommandResult) await this.SendCommandAsync(pingCommand);
             if (pingCommandResult != null && pingCommandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
             {
                 return true;
@@ -534,7 +677,7 @@ namespace slock4net
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
         }
 
-        public GroupEvent newGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        public GroupEvent NewGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }
@@ -544,22 +687,22 @@ namespace slock4net
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }
 
-        public TreeLock newTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(string parentKey, string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(parentKey, lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(byte[] lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(byte[] lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }
 
-        public TreeLock newTreeLock(string lockKey, uint timeout, uint expried)
+        public TreeLock NewTreeLock(string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
         }

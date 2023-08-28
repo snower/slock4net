@@ -1,5 +1,7 @@
-﻿using System;
+﻿using slock4net.Exceptions;
+using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace slock4net.Commands
 {
@@ -127,6 +129,20 @@ namespace slock4net.Commands
             {
                 return false;
             }
+        }
+
+        public override Task<bool> WaitTask()
+        {
+            if (this.taskCompletionSource == null)
+            {
+                return null;
+            }
+            Task.Delay(((int)(this.Timeout & 0xffff) + 120) * 1000, this.timeoutCancellationTokenSource.Token).ContinueWith(t =>
+            {
+                if (t.Status == TaskStatus.Canceled) return;
+                this.taskCompletionSource.SetException(new ClientCommandTimeoutException());
+            });
+            return this.taskCompletionSource.Task;
         }
     }
 }

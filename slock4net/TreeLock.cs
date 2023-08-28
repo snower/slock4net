@@ -2,6 +2,7 @@
 using slock4net.Exceptions;
 using System;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace slock4net
 {
@@ -65,7 +66,18 @@ namespace slock4net
 
             if (this.leafLock != null) return;
             TreeLeafLock leafLock = NewLeafLock();
-            leafLock.acquire();
+            leafLock.Acquire();
+            this.leafLock = leafLock;
+        }
+
+        public async Task AcquireAsync()
+        {
+            Lock checkLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, 0, (ushort)0, (byte)0);
+            await checkLock.AcquireAsync();
+
+            if (this.leafLock != null) return;
+            TreeLeafLock leafLock = NewLeafLock();
+            await leafLock.AcquireAsync();
             this.leafLock = leafLock;
         }
 
@@ -76,10 +88,23 @@ namespace slock4net
             leafLock = null;
         }
 
+        public async Task ReleaseAsync()
+        {
+            if (leafLock == null) return;
+            await leafLock.ReleaseAsync();
+            leafLock = null;
+        }
+
         public void Wait(uint timeout)
         {
             Lock checkLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, 0, (ushort)0, (byte)0);
             checkLock.Acquire();
+        }
+
+        public async Task WaitAsync(uint timeout)
+        {
+            Lock checkLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, 0, (ushort)0, (byte)0);
+            await checkLock.AcquireAsync();
         }
 
         public byte[] GetParentKey()
@@ -110,7 +135,7 @@ namespace slock4net
                 this.leafLock = leafLock;
             }
 
-            public void acquire()
+            public void Acquire()
             {
                 Lock childCheckLock = null;
                 Lock parentCheckLock = null;
@@ -170,9 +195,74 @@ namespace slock4net
                 }
             }
 
+            public async Task AcquireAsync()
+            {
+                Lock childCheckLock = null;
+                Lock parentCheckLock = null;
+
+                if (!treeLock.IsRoot())
+                {
+                    childCheckLock = new Lock(database, treeLock.GetLockKey(), treeLock.GetParentKey(), 0, treeLock.expried, (ushort)0xffff, (byte)0);
+                    try
+                    {
+                        await childCheckLock.AcquireAsync(ICommand.LOCK_FLAG_LOCK_TREE_LOCK);
+                        parentCheckLock = new Lock(database, treeLock.GetParentKey(), treeLock.GetLockKey(), 0, treeLock.expried, (ushort)0xffff, (byte)0);
+                        try
+                        {
+                            await parentCheckLock.AcquireAsync();
+                        }
+                        catch (LockLockedException)
+                        {
+                        }
+                        catch (Exception e)
+                        {
+                            await childCheckLock.ReleaseAsync();
+                            throw e;
+                        }
+                    }
+                    catch (LockLockedException)
+                    {
+                    }
+                }
+
+                try
+                {
+                    await leafLock.AcquireAsync();
+                }
+                catch (Exception e)
+                {
+                    if (childCheckLock != null)
+                    {
+                        try
+                        {
+                            await childCheckLock.ReleaseAsync();
+                        }
+                        catch (SlockException)
+                        {
+                        }
+                    }
+                    if (parentCheckLock != null)
+                    {
+                        try
+                        {
+                            await parentCheckLock.ReleaseAsync();
+                        }
+                        catch (SlockException)
+                        {
+                        }
+                    }
+                    throw e;
+                }
+            }
+
             public void Release()
             {
                 leafLock.Release(ICommand.UNLOCK_FLAG_UNLOCK_TREE_LOCK);
+            }
+
+            public async Task ReleaseAsync()
+            {
+                await leafLock.ReleaseAsync(ICommand.UNLOCK_FLAG_UNLOCK_TREE_LOCK);
             }
 
             public byte[] GetLockKey()
