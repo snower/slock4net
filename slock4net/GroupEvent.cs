@@ -175,7 +175,7 @@ namespace slock4net
             }
         }
 
-        public void waitAndTimeoutRetryClear(uint timeout)
+        public void WaitAndTimeoutRetryClear(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
             Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
@@ -213,7 +213,7 @@ namespace slock4net
             }
         }
 
-        public async Task waitAndTimeoutRetryClearAsync(uint timeout)
+        public async Task WaitAndTimeoutRetryClearAsync(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
             Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),

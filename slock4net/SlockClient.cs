@@ -672,7 +672,7 @@ namespace slock4net
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }
 
-        public GroupEvent newGroupEvent(string groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        public GroupEvent NewGroupEvent(string groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewGroupEvent(groupKey, clientId, versionId, timeout, expried);
         }

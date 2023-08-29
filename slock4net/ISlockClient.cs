@@ -32,7 +32,7 @@ namespace slock4net
         public abstract TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period);
         public abstract TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period);
         public abstract GroupEvent NewGroupEvent(byte[] groupKey, UInt64 clientId, UInt64 versionId, uint timeout, uint expried);
-        public abstract GroupEvent newGroupEvent(string groupKey, UInt64 clientId, UInt64 versionId, uint timeout, uint expried);
+        public abstract GroupEvent NewGroupEvent(string groupKey, UInt64 clientId, UInt64 versionId, uint timeout, uint expried);
         public abstract TreeLock NewTreeLock(byte[] parentKey, byte[] lockKey, uint timeout, uint expried);
         public abstract TreeLock NewTreeLock(string parentKey, string lockKey, uint timeout, uint expried);
         public abstract TreeLock NewTreeLock(byte[] lockKey, uint timeout, uint expried);
