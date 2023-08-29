@@ -5,7 +5,7 @@ High-performance distributed sync service and atomic DB. Provides good multi-cor
 # Install
 
 ```bash
-NuGet\Install-Package slock4net -Version 1.0.1
+NuGet\Install-Package slock4net -Version 1.0.2
 ```
 
 # Client Lock
