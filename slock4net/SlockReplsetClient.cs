@@ -98,8 +98,12 @@ namespace slock4net
             this.closed = true;
             foreach (SlockClient client in this.clients)
             {
-                client.Close();
+                try
+                {
+                    client.Close();
+                } catch { }
             }
+            this.clients.Clear();
         }
 
         public Task CloseAsync()

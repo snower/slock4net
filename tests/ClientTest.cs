@@ -325,6 +325,8 @@ namespace tests
             rootLock.Wait(1);
             Lock testLock = client.NewLock(rootLock.GetLockKey(), 0, 0);
             testLock.Acquire();
+
+            client.Close();
         }
 
 
@@ -428,6 +430,8 @@ namespace tests
             await rootLock.WaitAsync(1);
             Lock testLock = client.NewLock(rootLock.GetLockKey(), 0, 0);
             await testLock.AcquireAsync();
+
+            await client.CloseAsync();
         }
 
         [TestMethod]

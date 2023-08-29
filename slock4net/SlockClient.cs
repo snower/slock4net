@@ -150,16 +150,13 @@ namespace slock4net
             {
                 foreach (string requestId in this.requests.Keys.ToArray())
                 {
-                    Command command = this.requests[requestId];
-                    this.requests.Remove(requestId, out Command c);
-                    if (command == null)
+                    if (this.requests.TryRemove(requestId, out Command command) && command != null)
                     {
-                        continue;
-                    }
-                    command.CommandResult = null;
-                    if (!command.WakeupWaiter())
-                    {
-                        command.WakeupTask();
+                        command.CommandResult = null;
+                        if (!command.WakeupWaiter())
+                        {
+                            command.WakeupTask();
+                        }
                     }
                 }
 
@@ -238,16 +235,13 @@ namespace slock4net
             {
                 foreach (string requestId in this.requests.Keys.ToArray())
                 {
-                    Command command = this.requests[requestId];
-                    this.requests.Remove(requestId, out Command c);
-                    if (command == null)
+                    if (this.requests.TryRemove(requestId, out Command command) && command != null)
                     {
-                        continue;
-                    }
-                    command.CommandResult = null;
-                    if (!command.WakeupWaiter())
-                    {
-                        command.WakeupTask();
+                        command.CommandResult = null;
+                        if (!command.WakeupWaiter())
+                        {
+                            command.WakeupTask();
+                        }
                     }
                 }
             }
@@ -419,20 +413,13 @@ namespace slock4net
         protected void HandleCommand(CommandResult commandResult)
         {
             string requestId = EncodeHex(commandResult.GetRequestId());
-            if (!this.requests.ContainsKey(requestId))
+            if (this.requests.TryRemove(requestId, out Command command) && command != null)
             {
-                return;
-            }
-            Command command = this.requests[requestId];
-            this.requests.Remove(requestId, out Command c);
-            if (command == null)
-            {
-                return;
-            }
-            command.CommandResult = commandResult;
-            if (!command.WakeupWaiter())
-            {
-                command.WakeupTask();
+                command.CommandResult = commandResult;
+                if (!command.WakeupWaiter())
+                {
+                    command.WakeupTask();
+                }
             }
         }
 
@@ -456,8 +443,11 @@ namespace slock4net
                 {
                     throw new ClientUnconnectException();
                 }
+                if (!this.requests.TryAdd(requestId, command))
+                {
+                    throw new ClientCommandException();
+                }
 
-                this.requests.GetOrAdd(requestId, command);
                 try
                 {
                     int n = this.socket.Send(buf);
@@ -477,7 +467,7 @@ namespace slock4net
                 }
                 catch (SocketException)
                 {
-                    this.requests.Remove(requestId, out Command c);
+                    this.requests.TryRemove(requestId, out Command c);
                     try
                     {
                         this.socket.Close();
@@ -491,10 +481,9 @@ namespace slock4net
 
             if (!command.WaitWaiter())
             {
-                this.requests.Remove(requestId, out Command c);
+                this.requests.TryRemove(requestId, out Command c);
                 throw new ClientCommandTimeoutException();
             }
-
             if (command.CommandResult == null)
             {
                 throw new ClientClosedException();
@@ -508,7 +497,6 @@ namespace slock4net
             {
                 throw new ClientClosedException();
             }
-
             byte[] buf = command.DumpCommand();
             if (!command.CreateTask())
             {
@@ -522,8 +510,11 @@ namespace slock4net
                 {
                     throw new ClientUnconnectException();
                 }
+                if (!this.requests.TryAdd(requestId, command))
+                {
+                    throw new ClientCommandException();
+                }
 
-                this.requests.GetOrAdd(requestId, command);
                 try
                 {
                     int n = this.socket.Send(buf);
@@ -543,7 +534,7 @@ namespace slock4net
                 }
                 catch (SocketException)
                 {
-                    this.requests.Remove(requestId, out Command c);
+                    this.requests.TryRemove(requestId, out Command c);
                     try
                     {
                         this.socket.Close();
@@ -558,10 +549,9 @@ namespace slock4net
             Task<bool> task = command.WaitTask();
             if (task == null)
             {
-                this.requests.Remove(requestId, out Command c);
+                this.requests.TryRemove(requestId, out Command c);
                 throw new ClientCommandTimeoutException();
             }
-
             await task;
             if (command.CommandResult == null)
             {
