@@ -6,7 +6,7 @@ on:
     
 jobs:
   build-publish:
-  
+
     runs-on: ubuntu-latest
     
     services:
@@ -38,6 +38,6 @@ jobs:
     - name: Test
       run: dotnet test -c Release --no-build --verbosity normal --logger "console;verbosity=detailed"
     - name: Pack nugets
-      run: dotnet pack -c Release --no-build --output .
+      run: dotnet pack -c Release --no-build --include-symbols --include-source --output .
     - name: Push to NuGet
       run: dotnet nuget push "*.nupkg" --api-key ${{secrets.NUGET_APIKEY}} --source https://api.nuget.org/v3/index.json
