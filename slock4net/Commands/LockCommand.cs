@@ -1,4 +1,5 @@
-﻿using slock4net.Exceptions;
+﻿using slock4net.datas;
+using slock4net.Exceptions;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -16,8 +17,10 @@ namespace slock4net.Commands
         public uint Expried { get; protected set; }
         public ushort Count { get; protected set; }
         public byte RCount { get; protected set; }
+        public LockData LockData { get; protected set; }
+
         public LockCommand(byte commandType, byte flag, byte datbaseId, byte[] lockKey, byte[] lockId,
-            uint timeout, uint expried, ushort count, byte rCount) : base(commandType)
+            uint timeout, uint expried, ushort count, byte rCount, LockData lockData) : base(commandType)
         {
             this.Flag = flag;
             this.DatabaseId = datbaseId;
@@ -27,6 +30,12 @@ namespace slock4net.Commands
             this.Expried = expried;
             this.Count = count;
             this.RCount = rCount;
+            this.LockData = lockData;
+        }
+
+        public LockCommand(byte commandType, byte flag, byte datbaseId, byte[] lockKey, byte[] lockId,
+           uint timeout, uint expried, ushort count, byte rCount) : this(commandType, flag, datbaseId, lockKey, lockId, timeout, expried, count, rCount, null)
+        {
         }
 
         public override byte[] DumpCommand()
@@ -82,6 +91,20 @@ namespace slock4net.Commands
                 }
             }
             return this;
+        }
+
+        public override bool HasExtraData()
+        {
+            return (Flag & ICommand.LOCK_FLAG_CONTAINS_DATA) != 0;
+        }
+
+        public override byte[] GetExtraData()
+        {
+            if ((Flag & ICommand.LOCK_FLAG_CONTAINS_DATA) == 0) return null;
+            if (LockData == null) {
+                throw new LockDataException();
+            }
+            return LockData.DumpData();
         }
 
         public static byte[] GenLockId()

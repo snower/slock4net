@@ -1,4 +1,5 @@
 using slock4net.Commands;
+using slock4net.datas;
 using slock4net.Exceptions;
 using System;
 using System.Security.Cryptography;
@@ -7,29 +8,13 @@ using System.Threading.Tasks;
 
 namespace slock4net
 {
-    public class Lock {
-        private SlockDatabase database;
-        private byte[] lockKey;
-        private byte[] lockId;
-        private uint timeout;
-        private uint expried;
-        private ushort count;
-        private byte rCount;
+    public class Lock : AbstractExecution {
+        private readonly byte[] lockId;
 
         public byte[] LockKey { get { return lockKey; } }
         public byte[] LockId { get { return lockId; } }
 
-        public Lock(SlockDatabase database, byte[] lockKey, byte[] lockId, uint timeout, uint expried, ushort count, byte rCount) {
-            this.database = database;
-            if (lockKey.Length > 16) {
-                using (MD5 md5 = MD5.Create())
-                {
-                    this.lockKey = md5.ComputeHash(lockKey);
-                }
-            } else {
-                this.lockKey = new byte[16];
-                Array.Copy(lockKey, 0, this.lockKey, 16 - lockKey.Length, lockKey.Length);
-            }
+        public Lock(SlockDatabase database, byte[] lockKey, byte[] lockId, uint timeout, uint expried, ushort count, byte rCount) : base(database, lockKey, timeout, expried, count, rCount) {
             if (lockId == null) {
                 this.lockId = LockCommand.GenLockId();
             } else {
@@ -43,10 +28,6 @@ namespace slock4net
                     Array.Copy(lockId, 0, this.lockId, 16 - lockId.Length, lockId.Length);
                 }
             }
-            this.timeout = timeout;
-            this.expried = expried;
-            this.count = count;
-            this.rCount = rCount;
         }
 
         public Lock(SlockDatabase database, byte[] lockKey, uint timeout, uint expried) : this(database, lockKey, null, timeout, expried, 0, 0) {
@@ -56,10 +37,15 @@ namespace slock4net
         {
         }
 
-        public LockCommandResult Acquire(byte flag) {
-            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_LOCK, flag, database.DatabaseId, lockKey,
-                    lockId, timeout, expried, count, rCount);
+        public LockCommandResult Acquire(byte flag) { 
+            return Acquire(flag, null);
+        }
+
+        public LockCommandResult Acquire(byte flag, LockData lockData) {
+            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_LOCK, lockData != null ? ((byte) (flag | ICommand.LOCK_FLAG_CONTAINS_DATA)) : flag,
+                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount, lockData);
             LockCommandResult commandResult = (LockCommandResult)database.Client.SendCommand(command);
+            currentLockData = commandResult.LockResultData;
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED) {
                 return commandResult;
             }
@@ -79,10 +65,16 @@ namespace slock4net
         }
 
         public async Task<LockCommandResult> AcquireAsync(byte flag)
+        { 
+            return await AcquireAsync(flag, null);
+        }
+
+        public async Task<LockCommandResult> AcquireAsync(byte flag, LockData lockData)
         {
-            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_LOCK, flag, database.DatabaseId, lockKey,
-                    lockId, timeout, expried, count, rCount);
+            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_LOCK, lockData != null ? ((byte)(flag | ICommand.LOCK_FLAG_CONTAINS_DATA)) : flag,
+                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount, lockData);
             LockCommandResult commandResult = (LockCommandResult) await database.Client.SendCommandAsync(command);
+            currentLockData = commandResult.LockResultData;
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
             {
                 return commandResult;
@@ -103,19 +95,34 @@ namespace slock4net
             }
         }
 
+        public void Acquire(LockData lockData)
+        {
+            this.Acquire(0, lockData);
+        }
+
         public void Acquire() {
-            this.Acquire(0);
+            this.Acquire(0, null);
+        }
+        public async Task AcquireAsync(LockData lockData)
+        {
+            await this.AcquireAsync(0, lockData);
         }
 
         public async Task AcquireAsync()
         {
-            await this.AcquireAsync(0);
+            await this.AcquireAsync(0, null);
         }
 
-        public LockCommandResult Release(byte flag) {
-            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, flag, database.DatabaseId, lockKey,
-                    lockId, timeout, expried, count, rCount);
+        public LockCommandResult Release(byte flag)
+        {
+            return Release(flag, null);
+        }
+
+        public LockCommandResult Release(byte flag, LockData lockData) {
+            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, lockData != null ? ((byte)(flag | ICommand.UNLOCK_FLAG_CONTAINS_DATA)) : flag,
+                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount, lockData);
             LockCommandResult commandResult = (LockCommandResult)database.Client.SendCommand(command);
+            currentLockData = commandResult.LockResultData;
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED) {
                 return commandResult;
             }
@@ -136,9 +143,15 @@ namespace slock4net
 
         public async Task<LockCommandResult> ReleaseAsync(byte flag)
         {
-            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, flag, database.DatabaseId, lockKey,
-                    lockId, timeout, expried, count, rCount);
+            return await ReleaseAsync(flag, null);
+        }
+
+        public async Task<LockCommandResult> ReleaseAsync(byte flag, LockData lockData)
+        {
+            LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, lockData != null ? ((byte)(flag | ICommand.UNLOCK_FLAG_CONTAINS_DATA)) : flag,
+                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount);
             LockCommandResult commandResult = (LockCommandResult) await database.Client.SendCommandAsync(command);
+            currentLockData = commandResult.LockResultData;
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
             {
                 return commandResult;
@@ -159,72 +172,122 @@ namespace slock4net
             }
         }
 
+        public void Release(LockData lockData)
+        {
+            this.Release(0, lockData);
+        }
+
         public void Release() {
-            this.Release(0);
+            this.Release(0, null);
+        }
+
+        public async Task ReleaseAsync(LockData lockData)
+        {
+            await this.ReleaseAsync(0, lockData);
         }
 
         public async Task ReleaseAsync()
         {
-            await this.ReleaseAsync(0);
+            await this.ReleaseAsync(0, null);
         }
 
-        public CommandResult Show() {
+        public CommandResult Show()
+        {
+            return Show(null);
+        }
+
+        public CommandResult Show(LockData lockData) {
             try {
-                this.Acquire(ICommand.LOCK_FLAG_SHOW_WHEN_LOCKED);
+                this.Acquire(ICommand.LOCK_FLAG_SHOW_WHEN_LOCKED, lockData);
             } catch (LockNotOwnException e) {
-                return e.GetCommandResult();
+                return e.CommandResult;
             }
             return null;
         }
 
         public async Task<CommandResult> ShowAsync()
         {
+            return await ShowAsync(null);
+        }
+
+        public async Task<CommandResult> ShowAsync(LockData lockData)
+        {
             try
             {
-                await this.AcquireAsync(ICommand.LOCK_FLAG_SHOW_WHEN_LOCKED);
+                await this.AcquireAsync(ICommand.LOCK_FLAG_SHOW_WHEN_LOCKED, lockData);
             }
             catch (LockNotOwnException e)
             {
-                return e.GetCommandResult();
+                return e.CommandResult;
             }
             return null;
         }
 
-        public void Update() {
+        public void Update()
+        {
+            Update(null);
+        }
+
+        public void Update(LockData lockData) {
             try {
-                this.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                this.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
             } catch (LockLockedException) {
             }
         }
 
         public async Task UpdateAsync()
         {
+            await UpdateAsync(null);
+        }
+
+        public async Task UpdateAsync(LockData lockData)
+        {
             try
             {
-                await this.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                await this.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
             }
             catch (LockLockedException)
             {
             }
         }
 
-        public void ReleaseHead() {
-            this.Release(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED);
+        public void ReleaseHead()
+        {
+            ReleaseHead(null);
+        }
+
+        public void ReleaseHead(LockData lockData) {
+            this.Release(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED, lockData);
         }
 
         public async Task ReleaseHeadAsync()
         {
-            await this.ReleaseAsync(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED);
+            await ReleaseHeadAsync(null);
+        }
+
+        public async Task ReleaseHeadAsync(LockData lockData)
+        {
+            await this.ReleaseAsync(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED, lockData);
         }
 
         public LockCommandResult ReleaseHeadRetoLockWait()
         {
-            return this.Acquire((byte) (ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED | ICommand.UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT));
+            return ReleaseHeadRetoLockWait(null);
+        }
+
+        public LockCommandResult ReleaseHeadRetoLockWait(LockData lockData)
+        {
+            return this.Release((byte) (ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED | ICommand.UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT), lockData);
         }
 
         public async Task<LockCommandResult> ReleaseHeadRetoLockWaitAsync()
         {
-            return await this.AcquireAsync((byte)(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED | ICommand.UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT));
+            return await ReleaseHeadRetoLockWaitAsync(null);
+        }
+
+        public async Task<LockCommandResult> ReleaseHeadRetoLockWaitAsync(LockData lockData)
+        {
+            return await this.ReleaseAsync((byte)(ICommand.UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED | ICommand.UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT), lockData);
         }
     }
 }

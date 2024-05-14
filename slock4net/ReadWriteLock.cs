@@ -1,38 +1,18 @@
 using slock4net.Commands;
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace slock4net
 {
-    public class ReadWriteLock
+    public class ReadWriteLock : AbstractExecution
     {
-        private SlockDatabase database;
-        private byte[] lockKey;
-        private uint timeout;
-        private uint expried;
-        private LinkedList<Lock> readLocks;
+        private readonly LinkedList<Lock> readLocks;
         private Lock writeLock;
 
-        public ReadWriteLock(SlockDatabase database, byte[] lockKey, uint timeout, uint expried)
+        public ReadWriteLock(SlockDatabase database, byte[] lockKey, uint timeout, uint expried) : base(database, lockKey, timeout, expried)
         {
-            this.database = database;
-            if (lockKey.Length > 16)
-            {
-                using (MD5 md5 = MD5.Create())
-                {
-                    this.lockKey = md5.ComputeHash(lockKey);
-                }
-            }
-            else
-            {
-                this.lockKey = new byte[16];
-                Array.Copy(lockKey, 0, this.lockKey, 16 - lockKey.Length, lockKey.Length);
-            }
-            this.timeout = timeout;
-            this.expried = expried;
             this.readLocks = new LinkedList<Lock>();
         }
 

@@ -1,17 +1,15 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Text;
-using slock4net;
 using slock4net.Exceptions;
-using tests;
 using System.Threading.Tasks;
 
-namespace tests
+namespace slock4net.tests
 {
     [TestClass]
     public class ClientTest
     {
-        static string clientHost = "localhost";
-        static int clinetPort = 5658;
+        static readonly string clientHost = "127.0.0.1";
+        static readonly int clinetPort = 5658;
 
         [TestMethod]
         public void TestClientLock()

@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using slock4net.datas;
+using System;
+using System.IO;
 
 namespace slock4net.Commands
 {
@@ -12,6 +14,7 @@ namespace slock4net.Commands
         public ushort Count { get; protected set; }
         public byte LRCount { get; protected set; }
         public byte RCount { get; protected set; }
+        public LockResultData LockResultData { get; protected set; }
 
         public LockCommandResult() : base()
         {
@@ -45,6 +48,12 @@ namespace slock4net.Commands
             }
         }
 
+        public override CommandResult LoadCommandData(byte[] buffer)
+        {
+            this.LockResultData = new LockResultData(buffer);
+            return this;
+        }
+
         public override ICommand LoadCommand(byte[] buffer)
         {
             using (MemoryStream ms = new MemoryStream(buffer))
@@ -67,6 +76,11 @@ namespace slock4net.Commands
                 }
             }
             return this;
+        }
+
+        public override bool HasExtraData()
+        {
+            return (Flag & ICommand.LOCK_FLAG_CONTAINS_DATA) != 0;
         }
     }
 }

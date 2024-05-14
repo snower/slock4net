@@ -6,23 +6,15 @@ using System.Threading.Tasks;
 
 namespace slock4net
 {
-    public class TreeLock
+    public class TreeLock : AbstractExecution
     {
-        private SlockDatabase database;
-        private byte[] parentKey;
-        private byte[] lockKey;
-        private uint timeout;
-        private uint expried;
-        private bool isRoot;
+        private readonly byte[] parentKey;
+        private readonly bool isRoot;
         private TreeLeafLock leafLock;
 
-        public TreeLock(SlockDatabase database, byte[] parentKey, byte[] lockKey, uint timeout, uint expried)
+        public TreeLock(SlockDatabase database, byte[] parentKey, byte[] lockKey, uint timeout, uint expried) : base(database, lockKey, timeout, expried)
         {
-            this.database = database;
             this.parentKey = parentKey;
-            this.lockKey = lockKey;
-            this.timeout = timeout;
-            this.expried = expried;
             this.isRoot = parentKey == null;
             this.leafLock = null;
         }

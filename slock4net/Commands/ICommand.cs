@@ -1,4 +1,6 @@
-﻿namespace slock4net.Commands
+﻿using System;
+
+namespace slock4net.Commands
 {
     public interface ICommand
     {
@@ -21,18 +23,21 @@
         public const byte COMMAND_RESULT_EXPRIED = 0x09;
         public const byte COMMAND_RESULT_STATE_ERROR = 0x0a;
         public const byte COMMAND_RESULT_ERROR = 0x0b;
+        public const byte COMMAND_RESULT_LOCK_ACK_WAITING = 0x0c;
 
         public const byte LOCK_FLAG_SHOW_WHEN_LOCKED = 0x01;
         public const byte LOCK_FLAG_UPDATE_WHEN_LOCKED = 0x02;
         public const byte LOCK_FLAG_FROM_AOF = 0x04;
         public const byte LOCK_FLAG_CONCURRENT_CHECK = 0x08;
         public const byte LOCK_FLAG_LOCK_TREE_LOCK = 0x10;
+        public const byte LOCK_FLAG_CONTAINS_DATA = 0x20;
 
         public const byte UNLOCK_FLAG_UNLOCK_FIRST_LOCK_WHEN_UNLOCKED = 0x01;
         public const byte UNLOCK_FLAG_CANCEL_WAIT_LOCK_WHEN_UNLOCKED = 0x02;
         public const byte UNLOCK_FLAG_FROM_AOF = 0x04;
         public const byte UNLOCK_FLAG_SUCCED_TO_LOCK_WAIT = 0x08;
         public const byte UNLOCK_FLAG_UNLOCK_TREE_LOCK = 0x10;
+        public const byte UNLOCK_FLAG_CONTAINS_DATA = 0x20;
 
         public const uint TIMEOUT_FLAG_PUSH_SUBSCRIBE = 0x0020;
         public const uint TIMEOUT_FLAG_MINUTE_TIME = 0x0040;
@@ -58,9 +63,23 @@
         public const uint EXPRIED_FLAG_UNLIMITED_EXPRIED_TIME = 0x4000;
         public const uint EXPRIED_FLAG_KEEPLIVED = 0x8000;
 
+        public const byte LOCK_DATA_STAGE_LOCK = 0;
+        public const byte LOCK_DATA_STAGE_UNLOCK = 1;
+        public const byte LOCK_DATA_STAGE_TIMEOUT = 2;
+        public const byte LOCK_DATA_STAGE_EXPRIED = 3;
+
+        public const byte LOCK_DATA_COMMAND_TYPE_SET = 0;
+        public const byte LOCK_DATA_COMMAND_TYPE_UNSET = 1;
+        public const byte LOCK_DATA_COMMAND_TYPE_INCR = 2;
+        public const byte LOCK_DATA_COMMAND_TYPE_APPEND = 3;
+        public const byte LOCK_DATA_COMMAND_TYPE_SHIFT = 4;
+        public const byte LOCK_DATA_COMMAND_TYPE_EXECUTE = 5;
+        public const byte LOCK_DATA_COMMAND_TYPE_PIPELINE = 6;
+
         public abstract byte GetCommandType();
         public abstract byte[] GetRequestId();
         public abstract ICommand LoadCommand(byte[] buffer);
         public abstract byte[] DumpCommand();
+        bool HasExtraData();
     }
 }

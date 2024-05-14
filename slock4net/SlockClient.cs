@@ -2,7 +2,6 @@
 using slock4net.Exceptions;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -29,6 +28,8 @@ namespace slock4net
 
         protected string host;
         protected int port;
+        private ushort defaultTimeoutFlag;
+        private ushort defaultExpriedFlag;
         protected Socket socket;
         protected Thread thread;
         protected SlockDatabase[] databases;
@@ -49,6 +50,8 @@ namespace slock4net
         {
             this.host = host;
             this.port = port;
+            this.defaultTimeoutFlag = 0;
+            this.defaultExpriedFlag = 0;
             this.databases = new SlockDatabase[256];
             this.requests = new ConcurrentDictionary<string, Command>();
         }
@@ -60,6 +63,30 @@ namespace slock4net
             this.replsetClient = replsetClient;
             this.databases = databases;
             this.requests = new ConcurrentDictionary<string, Command>();
+        }
+
+        public virtual void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag)
+        {
+            this.defaultTimeoutFlag = defaultTimeoutFlag;
+            foreach (SlockDatabase database in databases)
+            {
+                if (database != null)
+                {
+                    database.DefaultTimeoutFlag = defaultTimeoutFlag;
+                }
+            }
+        }
+
+        public virtual void SetDefaultExpriedFlag(ushort defaultExpriedFlag)
+        {
+            this.defaultExpriedFlag = defaultExpriedFlag;
+            foreach (SlockDatabase database in databases)
+            {
+                if (database != null)
+                {
+                    database.DefaultExpriedFlag = defaultExpriedFlag;
+                }
+            }
         }
 
         public void Open()
@@ -193,23 +220,44 @@ namespace slock4net
         protected void Connect()
         {
             SocketException connectErr = null;
-            IPHostEntry hostEntry = Dns.GetHostEntry(this.host);
-            foreach (IPAddress address in hostEntry.AddressList)
+            if (IPAddress.TryParse(this.host, out IPAddress iPAddress))
             {
-                IPEndPoint ipe = new IPEndPoint(address, port);
-                Socket tempSocket = new Socket(ipe.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                IPEndPoint iPEndPoint = new IPEndPoint(iPAddress, port);
+                Socket tempSocket = new Socket(iPEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {
-                    tempSocket.Connect(ipe);
+                    tempSocket.Connect(iPEndPoint);
                     if (tempSocket.Connected)
                     {
                         this.socket = tempSocket;
-                        break;
                     }
-                    continue;
-                } catch(SocketException e)
+                }
+                catch (SocketException e)
                 {
                     connectErr = e;
+                }
+            }
+            else
+            {
+                IPHostEntry hostEntry = Dns.GetHostEntry(this.host);
+                foreach (IPAddress address in hostEntry.AddressList)
+                {
+                    IPEndPoint iPEndPoint = new IPEndPoint(address, port);
+                    Socket tempSocket = new Socket(iPEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                    try
+                    {
+                        tempSocket.Connect(iPEndPoint);
+                        if (tempSocket.Connected)
+                        {
+                            this.socket = tempSocket;
+                            break;
+                        }
+                        continue;
+                    }
+                    catch (SocketException e)
+                    {
+                        connectErr = e;
+                    }
                 }
             }
             if(this.socket == null)
@@ -269,6 +317,7 @@ namespace slock4net
                 {
                     try
                     {
+                        this.socket.Disconnect(false);
                         this.socket.Close();
                     }
                     catch (Exception)
@@ -295,25 +344,15 @@ namespace slock4net
             {
                 this.socket.Send(buffer);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 this.CloseSocket();
-                throw e;
+                throw;
             }
 
             try
             {
-                int n = this.socket.Receive(buffer, 64, SocketFlags.None);
-                while (n > 0 && n < 64)
-                {
-                    int nn = this.socket.Receive(buffer, n, 64 - n, SocketFlags.None);
-                    if (nn <= 0)
-                    {
-                        break;
-                    }
-                    n += nn;
-                }
-                if (n < 64)
+                if (ReceiveBytes(buffer, 64) < 64)
                 {
                     throw new SocketException(-2);
                 }
@@ -327,11 +366,39 @@ namespace slock4net
                 }
                 return initCommandResult;
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 this.CloseSocket();
-                throw e;
+                throw;
             }
+        }
+
+        private int ReceiveBytes(byte[] buffer, int length)
+        {
+            int n = this.socket.Receive(buffer, length, SocketFlags.None);
+            while (n > 0 && n < length) {
+                int nn = this.socket.Receive(buffer, n, length - n, SocketFlags.None);
+                if (nn <= 0) {
+                    break;
+                }
+                n += nn;
+            }
+            return n;
+        }
+
+        private int ReceiveBytes(byte[] buffer, int offset, int length)
+        {
+            int n = this.socket.Receive(buffer, offset, length, SocketFlags.None);
+            while (n > 0 && n < length)
+            {
+                int nn = this.socket.Receive(buffer, offset + n, length - n, SocketFlags.None);
+                if (nn <= 0)
+                {
+                    break;
+                }
+                n += nn;
+            }
+            return n;
         }
 
         protected void Run()
@@ -353,17 +420,8 @@ namespace slock4net
                         {
                             try
                             {
-                                int n = this.socket.Receive(buffer, 64, SocketFlags.None);
-                                while (n > 0 && n < 64)
-                                {
-                                    int nn = this.socket.Receive(buffer, n, 64 - n, SocketFlags.None);
-                                    if(nn <= 0)
-                                    {
-                                        break;
-                                    }
-                                    n += nn;
-                                }
-                                if(n < 64)
+                                int n = this.ReceiveBytes(buffer, 64);
+                                if (n < 64)
                                 {
                                     break;
                                 }
@@ -380,6 +438,21 @@ namespace slock4net
                                     LockCommandResult lockCommandResult = new LockCommandResult();
                                     if (lockCommandResult.LoadCommand(buffer) != null)
                                     {
+                                        if (lockCommandResult.HasExtraData())
+                                        {
+                                            int n = this.ReceiveBytes(buffer, 4);
+                                            if (n < 4)
+                                            {
+                                                break;
+                                            }
+                                            int dataLength = buffer[0] | buffer[1] << 8 | buffer[2] << 16 | buffer[3] << 24;
+                                            byte[] data = new byte[dataLength + 4];
+                                            if (ReceiveBytes(data, 4, dataLength) < dataLength)
+                                            {
+                                                break;
+                                            }
+                                            lockCommandResult.LoadCommandData(buffer);
+                                        }
                                         this.HandleCommand(lockCommandResult);
                                     }
                                     break;
@@ -423,6 +496,21 @@ namespace slock4net
             }
         }
 
+        private int SendBytes(byte[] buffer)
+        {
+            int n = this.socket.Send(buffer);
+            while (n > 0 && n < 64)
+            {
+                int nn = this.socket.Send(buffer, n, 64 - n, SocketFlags.None);
+                if (nn <= 0)
+                {
+                    break;
+                }
+                n += nn;
+            }
+            return n;
+        }
+
         public CommandResult SendCommand(Command command)
         {
             if (this.closed)
@@ -430,7 +518,7 @@ namespace slock4net
                 throw new ClientClosedException();
             }
 
-            byte[] buf = command.DumpCommand();
+            byte[] buffer = command.DumpCommand();
             if (!command.CreateWaiter())
             {
                 throw new ClientCommandException();
@@ -450,19 +538,17 @@ namespace slock4net
 
                 try
                 {
-                    int n = this.socket.Send(buf);
-                    while (n > 0 && n < 64)
-                    {
-                        int nn = this.socket.Send(buf, n, 64 - n, SocketFlags.None);
-                        if(nn <= 0)
-                        {
-                            break;
-                        }
-                        n += nn;
-                    }
-                    if(n < 64)
+                    if(SendBytes(buffer) < 64)
                     {
                         throw new ClientOutputStreamException();
+                    }
+                    byte[] extraData = command.GetExtraData();
+                    if (extraData != null)
+                    {
+                        if (SendBytes(extraData) < extraData.Length)
+                        {
+                            throw new ClientOutputStreamException();
+                        }
                     }
                 }
                 catch (SocketException)
@@ -497,7 +583,7 @@ namespace slock4net
             {
                 throw new ClientClosedException();
             }
-            byte[] buf = command.DumpCommand();
+            byte[] buffer = command.DumpCommand();
             if (!command.CreateTask())
             {
                 throw new ClientCommandException();
@@ -517,19 +603,17 @@ namespace slock4net
 
                 try
                 {
-                    int n = this.socket.Send(buf);
-                    while (n > 0 && n < 64)
-                    {
-                        int nn = this.socket.Send(buf, n, 64 - n, SocketFlags.None);
-                        if (nn <= 0)
-                        {
-                            break;
-                        }
-                        n += nn;
-                    }
-                    if (n < 64)
+                    if (SendBytes(buffer) < 64)
                     {
                         throw new ClientOutputStreamException();
+                    }
+                    byte[] extraData = command.GetExtraData();
+                    if (extraData != null)
+                    {
+                        if(SendBytes(extraData) < extraData.Length)
+                        {
+                            throw new ClientOutputStreamException();
+                        }
                     }
                 }
                 catch (SocketException)
@@ -590,7 +674,7 @@ namespace slock4net
                 {
                     if (this.databases[databaseId] == null)
                     {
-                        this.databases[databaseId] = new SlockDatabase(this, databaseId);
+                        this.databases[databaseId] = new SlockDatabase(this, databaseId, defaultTimeoutFlag, defaultExpriedFlag);
                     }
                 }
             }

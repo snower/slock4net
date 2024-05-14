@@ -38,6 +38,11 @@ namespace slock4net.Commands
             }
         }
 
+        public virtual CommandResult LoadCommandData(byte[] _)
+        {
+            return this;
+        }
+
         public virtual ICommand LoadCommand(byte[] buffer)
         {
             using (MemoryStream ms = new MemoryStream(buffer))
@@ -52,6 +57,11 @@ namespace slock4net.Commands
                 }
             }
             return this;
+        }
+
+        public virtual bool HasExtraData()
+        {
+            return false;
         }
     }
 }

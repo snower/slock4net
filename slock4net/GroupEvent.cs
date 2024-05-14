@@ -1,27 +1,20 @@
 ﻿using slock4net.Commands;
+using slock4net.datas;
 using slock4net.Exceptions;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace slock4net
 {
-    public class GroupEvent
+    public class GroupEvent : AbstractExecution
     {
-        private SlockDatabase database;
-        private byte[] groupKey;
-        private ulong clientId;
+        private readonly ulong clientId;
         private ulong versionId;
-        private uint timeout;
-        private uint expried;
 
-        public GroupEvent(SlockDatabase database, byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
+        public GroupEvent(SlockDatabase database, byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried) : base(database, groupKey, timeout, expried)
         {
-            this.database = database;
-            this.groupKey = groupKey;
             this.clientId = clientId;
             this.versionId = versionId;
-            this.timeout = timeout;
-            this.expried = expried;
         }
 
         public GroupEvent(SlockDatabase database, string groupKey, ulong clientId, ulong versionId, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(groupKey), clientId, versionId, timeout, expried)
@@ -30,27 +23,41 @@ namespace slock4net
 
         public void Clear()
         {
+            Clear(null);
+        }
+
+        public void Clear(LockData lockData)
+        {
             byte[] lockId = EncodeLockId(0, versionId);
             uint timeout = this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16);
-            Lock eventLock = new Lock(database, groupKey, lockId, timeout, expried, (ushort)0, (byte)0);
-            eventLock.Update();
+            Lock eventLock = new Lock(database, lockKey, lockId, timeout, expried, (ushort)0, (byte)0);
+            eventLock.Update(lockData);
         }
 
         public async Task ClearAsync()
         {
-            byte[] lockId = EncodeLockId(0, versionId);
-            uint timeout = this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16);
-            Lock eventLock = new Lock(database, groupKey, lockId, timeout, expried, (ushort)0, (byte)0);
-            await eventLock.UpdateAsync();
+            await ClearAsync(null);
         }
 
+        public async Task ClearAsync(LockData lockData)
+        {
+            byte[] lockId = EncodeLockId(0, versionId);
+            uint timeout = this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16);
+            Lock eventLock = new Lock(database, lockKey, lockId, timeout, expried, (ushort)0, (byte)0);
+            await eventLock.UpdateAsync(lockData);
+        }
 
         public void Set()
         {
-            Lock eventLock = new Lock(database, groupKey, new byte[16], timeout, expried, (ushort)0, (byte)0);
+            Set(null);
+        }
+
+        public void Set(LockData lockData)
+        {
+            Lock eventLock = new Lock(database, lockKey, new byte[16], timeout, expried, (ushort)0, (byte)0);
             try
             {
-                eventLock.ReleaseHead();
+                eventLock.ReleaseHead(lockData);
             }
             catch (LockUnlockedException)
             {
@@ -59,10 +66,15 @@ namespace slock4net
 
         public async Task SetAsync()
         {
-            Lock eventLock = new Lock(database, groupKey, new byte[16], timeout, expried, (ushort)0, (byte)0);
+            await SetAsync(null);
+        }
+
+        public async Task SetAsync(LockData lockData)
+        {
+            Lock eventLock = new Lock(database, lockKey, new byte[16], timeout, expried, (ushort)0, (byte)0);
             try
             {
-                await eventLock.ReleaseHeadAsync();
+                await eventLock.ReleaseHeadAsync(lockData);
             }
             catch (LockUnlockedException)
             {
@@ -71,7 +83,7 @@ namespace slock4net
 
         public bool IsSet()
         {
-            Lock checkLock = new Lock(database, groupKey, LockCommand.GenLockId(), 0, 0, (ushort)0, (byte)0);
+            Lock checkLock = new Lock(database, lockKey, LockCommand.GenLockId(), 0, 0, (ushort)0, (byte)0);
             try
             {
                 checkLock.Acquire();
@@ -85,7 +97,7 @@ namespace slock4net
 
         public async Task<bool> IsSetAsync()
         {
-            Lock checkLock = new Lock(database, groupKey, LockCommand.GenLockId(), 0, 0, (ushort)0, (byte)0);
+            Lock checkLock = new Lock(database, lockKey, LockCommand.GenLockId(), 0, 0, (ushort)0, (byte)0);
             try
             {
                 await checkLock.AcquireAsync();
@@ -99,10 +111,15 @@ namespace slock4net
 
         public void Wakeup()
         {
+            Wakeup(null);
+        }
+
+        public void Wakeup(LockData lockData)
+        {
             byte[] lockId = new byte[16];
             uint timeout = this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16);
-            Lock eventLock = new Lock(database, groupKey, lockId, timeout, expried, (ushort)0, (byte)0);
-            LockCommandResult lockCommandResult = eventLock.ReleaseHeadRetoLockWait();
+            Lock eventLock = new Lock(database, lockKey, lockId, timeout, expried, (ushort)0, (byte)0);
+            LockCommandResult lockCommandResult = eventLock.ReleaseHeadRetoLockWait(lockData);
             byte[] rlockId = lockCommandResult.LockId;
             if (!EqualBytes(lockId, rlockId))
             {
@@ -113,10 +130,15 @@ namespace slock4net
 
         public async Task WakeupAsync()
         {
+            await WakeupAsync(null);
+        }
+
+        public async Task WakeupAsync(LockData lockData)
+        {
             byte[] lockId = new byte[16];
             uint timeout = this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16);
-            Lock eventLock = new Lock(database, groupKey, lockId, timeout, expried, (ushort)0, (byte)0);
-            LockCommandResult lockCommandResult = await eventLock.ReleaseHeadRetoLockWaitAsync();
+            Lock eventLock = new Lock(database, lockKey, lockId, timeout, expried, (ushort)0, (byte)0);
+            LockCommandResult lockCommandResult = await eventLock.ReleaseHeadRetoLockWaitAsync(lockData);
             byte[] rlockId = lockCommandResult.LockId;
             if (!EqualBytes(lockId, rlockId))
             {
@@ -128,7 +150,7 @@ namespace slock4net
         public void Wait(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
-            Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
+            Lock waitLock = new Lock(database, lockKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
                     0, 0, (byte)0);
             try
             {
@@ -139,6 +161,7 @@ namespace slock4net
                     versionId = ((ulong)rlockId[0]) | (((ulong)rlockId[1]) << 8) | (((ulong)rlockId[2]) << 16) | (((ulong)rlockId[3]) << 24)
                             | (((ulong)rlockId[4]) << 32) | (((ulong)rlockId[5]) << 40) | (((ulong)rlockId[6]) << 48) | (((ulong)rlockId[7]) << 56);
                 }
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (LockTimeoutException)
             {
@@ -153,7 +176,7 @@ namespace slock4net
         public async Task WaitAsync(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
-            Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
+            Lock waitLock = new Lock(database, lockKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
                     0, 0, (byte)0);
             try
             {
@@ -164,6 +187,7 @@ namespace slock4net
                     versionId = ((ulong)rlockId[0]) | (((ulong)rlockId[1]) << 8) | (((ulong)rlockId[2]) << 16) | (((ulong)rlockId[3]) << 24)
                             | (((ulong)rlockId[4]) << 32) | (((ulong)rlockId[5]) << 40) | (((ulong)rlockId[6]) << 48) | (((ulong)rlockId[7]) << 56);
                 }
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (LockTimeoutException)
             {
@@ -178,7 +202,7 @@ namespace slock4net
         public void WaitAndTimeoutRetryClear(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
-            Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
+            Lock waitLock = new Lock(database, lockKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
                     0, (ushort)0, (byte)0);
             try
             {
@@ -189,14 +213,16 @@ namespace slock4net
                     versionId = ((ulong)rlockId[0]) | (((ulong)rlockId[1]) << 8) | (((ulong)rlockId[2]) << 16) | (((ulong)rlockId[3]) << 24)
                             | (((ulong)rlockId[4]) << 32) | (((ulong)rlockId[5]) << 40) | (((ulong)rlockId[6]) << 48) | (((ulong)rlockId[7]) << 56);
                 }
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException ex) when (ex is LockTimeoutException || ex is ClientCommandTimeoutException)
             {
-                Lock eventLock = new Lock(database, EncodeLockId(0, versionId), groupKey,
+                Lock eventLock = new Lock(database, EncodeLockId(0, versionId), lockKey,
                     this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16), expried, (ushort)0, (byte)0);
                 try
                 {
                     eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    currentLockData = eventLock.CurrentLockData;
                     try
                     {
                         eventLock.Release();
@@ -216,7 +242,7 @@ namespace slock4net
         public async Task WaitAndTimeoutRetryClearAsync(uint timeout)
         {
             byte[] lockId = EncodeLockId(clientId, versionId);
-            Lock waitLock = new Lock(database, groupKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
+            Lock waitLock = new Lock(database, lockKey, lockId, timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16),
                     0, (ushort)0, (byte)0);
             try
             {
@@ -227,14 +253,16 @@ namespace slock4net
                     versionId = ((ulong)rlockId[0]) | (((ulong)rlockId[1]) << 8) | (((ulong)rlockId[2]) << 16) | (((ulong)rlockId[3]) << 24)
                             | (((ulong)rlockId[4]) << 32) | (((ulong)rlockId[5]) << 40) | (((ulong)rlockId[6]) << 48) | (((ulong)rlockId[7]) << 56);
                 }
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException ex) when (ex is LockTimeoutException || ex is ClientCommandTimeoutException)
             {
-                Lock eventLock = new Lock(database, EncodeLockId(0, versionId), groupKey,
+                Lock eventLock = new Lock(database, EncodeLockId(0, versionId), lockKey,
                     this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16), expried, (ushort)0, (byte)0);
                 try
                 {
                     await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    currentLockData = eventLock.CurrentLockData;
                     try
                     {
                         await eventLock.ReleaseAsync();

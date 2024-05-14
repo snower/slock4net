@@ -6,6 +6,8 @@ namespace slock4net
 {
     public interface ISlockClient
     {
+        void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag);
+        void SetDefaultExpriedFlag(ushort defaultExpriedFlag);
         public abstract void Open();
         public abstract Task OpenAsync();
         public abstract ISlockClient TryOpen();

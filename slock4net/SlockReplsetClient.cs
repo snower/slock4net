@@ -9,6 +9,8 @@ namespace slock4net
     public class SlockReplsetClient : ISlockClient
     {
         protected string[] hosts;
+        private ushort defaultTimeoutFlag;
+        private ushort defaultExpriedFlag;
         protected LinkedList<SlockClient> clients;
         protected LinkedList<SlockClient> livedClients;
         private volatile SlockClient livedLeaderClient;
@@ -22,6 +24,30 @@ namespace slock4net
             this.livedClients = new LinkedList<SlockClient>();
             this.closed = false;
             this.databases = new SlockDatabase[256];
+        }
+
+        public virtual void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag)
+        {
+            this.defaultTimeoutFlag = defaultTimeoutFlag;
+            foreach (SlockDatabase database in databases)
+            {
+                if (database != null)
+                {
+                    database.DefaultTimeoutFlag = defaultTimeoutFlag;
+                }
+            }
+        }
+
+        public virtual void SetDefaultExpriedFlag(ushort defaultExpriedFlag)
+        {
+            this.defaultExpriedFlag = defaultExpriedFlag;
+            foreach (SlockDatabase database in databases)
+            {
+                if (database != null)
+                {
+                    database.DefaultExpriedFlag = defaultExpriedFlag;
+                }
+            }
         }
 
         public void Open()
@@ -223,7 +249,7 @@ namespace slock4net
                 {
                     if (this.databases[databaseId] == null)
                     {
-                        this.databases[databaseId] = new SlockDatabase(this, databaseId);
+                        this.databases[databaseId] = new SlockDatabase(this, databaseId, defaultTimeoutFlag, defaultExpriedFlag);
                     }
                 }
             }

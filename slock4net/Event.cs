@@ -1,40 +1,20 @@
 using slock4net.Commands;
+using slock4net.datas;
 using slock4net.Exceptions;
-using System;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace slock4net
 {
-    public class Event
+    public class Event : AbstractExecution
     {
-        private SlockDatabase database;
-        private byte[] eventKey;
-        private uint timeout;
-        private uint expried;
         private Lock eventLock;
         private Lock checkLock;
         private Lock waitLock;
         private bool defaultSeted;
 
-        public Event(SlockDatabase database, byte[] eventKey, uint timeout, uint expried, bool defaultSeted)
+        public Event(SlockDatabase database, byte[] eventKey, uint timeout, uint expried, bool defaultSeted) : base(database, eventKey, timeout, expried)
         {
-            this.database = database;
-            if (eventKey.Length > 16)
-            {
-                using (MD5 md5 = MD5.Create())
-                {
-                    this.eventKey = md5.ComputeHash(eventKey);
-                }
-            }
-            else
-            {
-                this.eventKey = new byte[16];
-                Array.Copy(eventKey, 0, this.eventKey, 16 - eventKey.Length, eventKey.Length);
-            }
-            this.timeout = timeout;
-            this.expried = expried;
             this.defaultSeted = defaultSeted;
         }
 
@@ -53,18 +33,23 @@ namespace slock4net
 
         public void Clear()
         {
+            Clear(null);
+        }
+
+        public void Clear(LockData lockData)
+        {
             if (defaultSeted)
             {
                 lock (this)
                 {
                     if (eventLock == null)
                     {
-                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                        eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 0, 0);
                     }
                 }
                 try
                 {
-                    eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
                 }
                 catch (LockLockedException)
                 {
@@ -76,12 +61,12 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 1, 0);
                 }
             }
             try
             {
-                eventLock.Release();
+                eventLock.Release(lockData);
             }
             catch (LockUnlockedException)
             {
@@ -90,18 +75,23 @@ namespace slock4net
 
         public async Task ClearAsync()
         {
+            await ClearAsync(null);
+        }
+
+        public async Task ClearAsync(LockData lockData)
+        {
             if (defaultSeted)
             {
                 lock (this)
                 {
                     if (eventLock == null)
                     {
-                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                        eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 0, 0);
                     }
                 }
                 try
                 {
-                    await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
                 }
                 catch (LockLockedException)
                 {
@@ -113,12 +103,12 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 1, 0);
                 }
             }
             try
             {
-                await eventLock.ReleaseAsync();
+                await eventLock.ReleaseAsync(lockData);
             }
             catch (LockUnlockedException)
             {
@@ -127,18 +117,23 @@ namespace slock4net
 
         public void Set()
         {
+            Set(null);
+        }
+
+        public void Set(LockData lockData)
+        {
             if (defaultSeted)
             {
                 lock (this)
                 {
                     if (eventLock == null)
                     {
-                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                        eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 0, 0);
                     }
                 }
                 try
                 {
-                    eventLock.Release();
+                    eventLock.Release(lockData);
                 }
                 catch (LockUnlockedException)
                 {
@@ -150,12 +145,12 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 1, 0);
                 }
             }
             try
             {
-                eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
             }
             catch (LockLockedException)
             {
@@ -164,18 +159,23 @@ namespace slock4net
 
         public async Task SetAsync()
         {
+            await SetAsync(null);
+        }
+
+        public async Task SetAsync(LockData lockData)
+        {
             if (defaultSeted)
             {
                 lock (this)
                 {
                     if (eventLock == null)
                     {
-                        eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 0, 0);
+                        eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 0, 0);
                     }
                 }
                 try
                 {
-                    await eventLock.ReleaseAsync();
+                    await eventLock.ReleaseAsync(lockData);
                 }
                 catch (LockUnlockedException)
                 {
@@ -187,12 +187,12 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, timeout, expried, 1, 0);
                 }
             }
             try
             {
-                await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, lockData);
             }
             catch (LockLockedException)
             {
@@ -207,7 +207,7 @@ namespace slock4net
                 {
                     if (checkLock == null)
                     {
-                        checkLock = new Lock(database, eventKey, null, 0, 0, 0, 0);
+                        checkLock = new Lock(database, lockKey, null, 0, 0, 0, 0);
                     }
                 }
                 try
@@ -225,7 +225,7 @@ namespace slock4net
             {
                 if (checkLock == null)
                 {
-                    checkLock = new Lock(database, eventKey, null, 0x02000000, 0, 1, 0);
+                    checkLock = new Lock(database, lockKey, null, 0x02000000, 0, 1, 0);
                 }
             }
             try
@@ -251,7 +251,7 @@ namespace slock4net
                 {
                     if (checkLock == null)
                     {
-                        checkLock = new Lock(database, eventKey, null, 0, 0, 0, 0);
+                        checkLock = new Lock(database, lockKey, null, 0, 0, 0, 0);
                     }
                 }
                 try
@@ -269,7 +269,7 @@ namespace slock4net
             {
                 if (checkLock == null)
                 {
-                    checkLock = new Lock(database, eventKey, null, 0x02000000, 0, 1, 0);
+                    checkLock = new Lock(database, lockKey, null, 0x02000000, 0, 1, 0);
                 }
             }
             try
@@ -295,13 +295,14 @@ namespace slock4net
                 {
                     if (waitLock == null)
                     {
-                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                        waitLock = new Lock(database, lockKey, null, timeout, 0, 0, 0);
                     }
                 }
 
                 try
                 {
                     waitLock.Acquire();
+                    currentLockData = waitLock.CurrentLockData;
                 }
                 catch (LockTimeoutException)
                 {
@@ -318,13 +319,14 @@ namespace slock4net
             {
                 if (waitLock == null)
                 {
-                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                    waitLock = new Lock(database, lockKey, null, timeout | 0x02000000, 0, 1, 0);
                 }
             }
 
             try
             {
                 waitLock.Acquire();
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (LockTimeoutException)
             {
@@ -344,13 +346,14 @@ namespace slock4net
                 {
                     if (waitLock == null)
                     {
-                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                        waitLock = new Lock(database, lockKey, null, timeout, 0, 0, 0);
                     }
                 }
 
                 try
                 {
                     await waitLock.AcquireAsync();
+                    currentLockData = waitLock.CurrentLockData;
                 }
                 catch (LockTimeoutException)
                 {
@@ -367,13 +370,14 @@ namespace slock4net
             {
                 if (waitLock == null)
                 {
-                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                    waitLock = new Lock(database, lockKey, null, timeout | 0x02000000, 0, 1, 0);
                 }
             }
 
             try
             {
                 await waitLock.AcquireAsync();
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (LockTimeoutException)
             {
@@ -393,13 +397,14 @@ namespace slock4net
                 {
                     if (waitLock == null)
                     {
-                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                        waitLock = new Lock(database, lockKey, null, timeout, 0, 0, 0);
                     }
                 }
 
                 try
                 {
                     waitLock.Acquire();
+                    currentLockData = waitLock.CurrentLockData;
                 }
                 catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
                 {
@@ -407,13 +412,14 @@ namespace slock4net
                     {
                         if (eventLock == null)
                         {
-                            eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 0, 0);
+                            eventLock = new Lock(database, lockKey, lockKey, this.timeout, expried, 0, 0);
                         }
                     }
 
                     try
                     {
                         eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                        currentLockData = eventLock.CurrentLockData;
                         try
                         {
                             eventLock.Release();
@@ -435,12 +441,13 @@ namespace slock4net
             {
                 if (waitLock == null)
                 {
-                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                    waitLock = new Lock(database, lockKey, null, timeout | 0x02000000, 0, 1, 0);
                 }
             }
             try
             {
                 waitLock.Acquire();
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
             {
@@ -451,7 +458,7 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, this.timeout, expried, 1, 0);
                 }
             }
             try
@@ -471,13 +478,14 @@ namespace slock4net
                 {
                     if (waitLock == null)
                     {
-                        waitLock = new Lock(database, eventKey, null, timeout, 0, 0, 0);
+                        waitLock = new Lock(database, lockKey, null, timeout, 0, 0, 0);
                     }
                 }
 
                 try
                 {
                     await waitLock.AcquireAsync();
+                    currentLockData = waitLock.CurrentLockData;
                 }
                 catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
                 {
@@ -485,13 +493,14 @@ namespace slock4net
                     {
                         if (eventLock == null)
                         {
-                            eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 0, 0);
+                            eventLock = new Lock(database, lockKey, lockKey, this.timeout, expried, 0, 0);
                         }
                     }
 
                     try
                     {
                         await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                        currentLockData = eventLock.CurrentLockData;
                         try
                         {
                             await eventLock.ReleaseAsync();
@@ -513,12 +522,13 @@ namespace slock4net
             {
                 if (waitLock == null)
                 {
-                    waitLock = new Lock(database, eventKey, null, timeout | 0x02000000, 0, 1, 0);
+                    waitLock = new Lock(database, lockKey, null, timeout | 0x02000000, 0, 1, 0);
                 }
             }
             try
             {
                 await waitLock.AcquireAsync();
+                currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
             {
@@ -529,7 +539,7 @@ namespace slock4net
             {
                 if (eventLock == null)
                 {
-                    eventLock = new Lock(database, eventKey, eventKey, this.timeout, expried, 1, 0);
+                    eventLock = new Lock(database, lockKey, lockKey, this.timeout, expried, 1, 0);
                 }
             }
             try

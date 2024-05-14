@@ -1,4 +1,6 @@
 using slock4net.Commands;
+using slock4net.datas;
+using System;
 
 namespace slock4net.Exceptions
 {
@@ -19,8 +21,8 @@ namespace slock4net.Exceptions
             "UNKNOWN_ERROR"
     };
 
-        private Command command;
-        private CommandResult commandResult;
+        private readonly Command command;
+        private readonly CommandResult commandResult;
 
         public LockException(Command command, CommandResult commandResult) : base(GetErrMessage(commandResult))
         {
@@ -41,14 +43,59 @@ namespace slock4net.Exceptions
             return "Code " + commandResult.Result.ToString();
         }
 
-        public Command GetCommand()
+        public Command Command
         {
-            return command;
+            get { return command; }
         }
 
-        public CommandResult GetCommandResult()
+        public CommandResult CommandResult
         {
-            return commandResult;
+            get { return commandResult; }
+        }
+
+        public LockResultData LockData
+        {
+            get {
+                if (commandResult is LockCommandResult lockCommandResult) {
+                    return lockCommandResult.LockResultData;
+                }
+                return null;
+            }
+        }
+
+        public byte[] LockDataAsBytes
+        {
+            get {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsBytes;
+                }
+                return null;
+            }
+        }
+
+        public string LockDataAsString
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsString;
+                }
+                return null;
+            }
+        }
+
+        public long LockDataAsLong
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsLong;
+                }
+                return 0L;
+            }
         }
     }
 }

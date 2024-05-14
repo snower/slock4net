@@ -63,6 +63,16 @@ namespace slock4net.Commands
             return this;
         }
 
+        public virtual bool HasExtraData()
+        {
+            return false;
+        }
+
+        public virtual byte[] GetExtraData()
+        {
+            return null;
+        }
+
         public static byte[] GenRequestId()
         {
             using (MemoryStream ms = new MemoryStream(16))
