@@ -13,8 +13,8 @@ namespace slock4net
             set { defaultTimeoutFlag = value; } 
         }
         public ushort DefaultExpriedFlag {
-            get { return defaultTimeoutFlag; }
-            set { defaultTimeoutFlag = value; } 
+            get { return defaultExpriedFlag; }
+            set { defaultExpriedFlag = value; } 
         }
 
         public SlockDatabase(ISlockClient client, byte databaseId, ushort defaultTimeoutFlag, ushort defaultExpriedFlag)

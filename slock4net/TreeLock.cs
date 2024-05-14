@@ -146,10 +146,10 @@ namespace slock4net
                         catch (LockLockedException)
                         {
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             childCheckLock.Release();
-                            throw e;
+                            throw;
                         }
                     }
                     catch (LockLockedException)
@@ -161,7 +161,7 @@ namespace slock4net
                 {
                     leafLock.Acquire();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (childCheckLock != null)
                     {
@@ -183,7 +183,7 @@ namespace slock4net
                         {
                         }
                     }
-                    throw e;
+                    throw;
                 }
             }
 
@@ -206,10 +206,10 @@ namespace slock4net
                         catch (LockLockedException)
                         {
                         }
-                        catch (Exception e)
+                        catch (Exception)
                         {
                             await childCheckLock.ReleaseAsync();
-                            throw e;
+                            throw;
                         }
                     }
                     catch (LockLockedException)
@@ -221,7 +221,7 @@ namespace slock4net
                 {
                     await leafLock.AcquireAsync();
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     if (childCheckLock != null)
                     {
@@ -243,7 +243,7 @@ namespace slock4net
                         {
                         }
                     }
-                    throw e;
+                    throw;
                 }
             }
 
