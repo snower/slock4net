@@ -2,6 +2,7 @@
 using slock4net.Exceptions;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -12,18 +13,38 @@ namespace slock4net
 {
     public class SlockClient : ISlockClient
     {
-        private static readonly char[] DIGITS_LOWER = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
-
-        private static string EncodeHex(byte[] data)
+        private class ByteArrayComparer : IEqualityComparer<byte[]>
         {
-            int l = data.Length;
-            char[] outStr = new char[l << 1];
-            for (int i = 0, j = 0; i < l; i++)
+            public bool Equals(byte[] x, byte[] y)
             {
-                outStr[j++] = DIGITS_LOWER[(240 & data[i]) >> 4];
-                outStr[j++] = DIGITS_LOWER[15 & data[i]];
+                if (ReferenceEquals(x, y))
+                    return true;
+                if (x == null || y == null)
+                    return false;
+                if (x.Length != y.Length)
+                    return false;
+                for (int i = 0; i < x.Length; i++)
+                {
+                    if (x[i] != y[i])
+                        return false;
+                }
+                return true;
             }
-            return new string(outStr);
+
+            public int GetHashCode(byte[] obj)
+            {
+                if (obj == null)
+                    throw new ArgumentNullException(nameof(obj));
+                unchecked
+                {
+                    int hash = 17;
+                    foreach (byte b in obj)
+                    {
+                        hash = hash * 31 + b.GetHashCode();
+                    }
+                    return hash;
+                }
+            }
         }
 
         protected string host;
@@ -33,7 +54,7 @@ namespace slock4net
         protected Socket socket;
         protected Thread thread;
         protected SlockDatabase[] databases;
-        protected ConcurrentDictionary<string, Command> requests;
+        protected ConcurrentDictionary<byte[], Command> requests;
         protected SlockReplsetClient replsetClient;
         protected byte[] clientId;
         protected bool closed = false;
@@ -53,7 +74,7 @@ namespace slock4net
             this.defaultTimeoutFlag = 0;
             this.defaultExpriedFlag = 0;
             this.databases = new SlockDatabase[256];
-            this.requests = new ConcurrentDictionary<string, Command>();
+            this.requests = new ConcurrentDictionary<byte[], Command>(new ByteArrayComparer());
         }
 
         public SlockClient(string host, int port, SlockReplsetClient replsetClient, SlockDatabase[] databases)
@@ -62,7 +83,7 @@ namespace slock4net
             this.port = port;
             this.replsetClient = replsetClient;
             this.databases = databases;
-            this.requests = new ConcurrentDictionary<string, Command>();
+            this.requests = new ConcurrentDictionary<byte[], Command>(new ByteArrayComparer());
         }
 
         public virtual void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag)
@@ -175,7 +196,7 @@ namespace slock4net
 
             lock (this)
             {
-                foreach (string requestId in this.requests.Keys.ToArray())
+                foreach (byte[] requestId in this.requests.Keys.ToArray())
                 {
                     if (this.requests.TryRemove(requestId, out Command command) && command != null)
                     {
@@ -281,7 +302,7 @@ namespace slock4net
         {
             lock (this)
             {
-                foreach (string requestId in this.requests.Keys.ToArray())
+                foreach (byte[] requestId in this.requests.Keys.ToArray())
                 {
                     if (this.requests.TryRemove(requestId, out Command command) && command != null)
                     {
@@ -485,7 +506,7 @@ namespace slock4net
 
         protected void HandleCommand(CommandResult commandResult)
         {
-            string requestId = EncodeHex(commandResult.GetRequestId());
+            byte[] requestId = commandResult.GetRequestId();
             if (this.requests.TryRemove(requestId, out Command command) && command != null)
             {
                 command.CommandResult = commandResult;
@@ -524,7 +545,7 @@ namespace slock4net
                 throw new ClientCommandException();
             }
 
-            string requestId = EncodeHex(command.GetRequestId());
+            byte[] requestId = command.GetRequestId();
             lock (this)
             {
                 if (this.socket == null)
@@ -589,7 +610,7 @@ namespace slock4net
                 throw new ClientCommandException();
             }
 
-            string requestId = EncodeHex(command.GetRequestId());
+            byte[] requestId = command.GetRequestId();
             lock (this)
             {
                 if (this.socket == null)
