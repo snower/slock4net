@@ -33,7 +33,17 @@ namespace slock4net
 
         public void Clear()
         {
-            Clear(null);
+            Clear((LockData) null);
+        }
+
+        public void Clear(byte[] data)
+        {
+            Clear(new LockSetData(data));
+        }
+
+        public void Clear(string data)
+        {
+            Clear(new LockSetData(data));
         }
 
         public void Clear(LockData lockData)
@@ -75,7 +85,17 @@ namespace slock4net
 
         public async Task ClearAsync()
         {
-            await ClearAsync(null);
+            await ClearAsync((LockData) null);
+        }
+
+        public async Task ClearAsync(byte[] data)
+        {
+            await ClearAsync(new LockSetData(data));
+        }
+
+        public async Task ClearAsync(string data)
+        {
+            await ClearAsync(new LockSetData(data));
         }
 
         public async Task ClearAsync(LockData lockData)
@@ -117,7 +137,17 @@ namespace slock4net
 
         public void Set()
         {
-            Set(null);
+            Set((LockData) null);
+        }
+
+        public void Set(byte[] data)
+        {
+            Set(new LockSetData(data));
+        }
+
+        public void Set(string data)
+        {
+            Set(new LockSetData(data));
         }
 
         public void Set(LockData lockData)
@@ -159,7 +189,17 @@ namespace slock4net
 
         public async Task SetAsync()
         {
-            await SetAsync(null);
+            await SetAsync((LockData) null);
+        }
+
+        public async Task SetAsync(byte[] data)
+        {
+            await SetAsync(new LockSetData(data));
+        }
+
+        public async Task SetAsync(string data)
+        {
+            await SetAsync(new LockSetData(data));
         }
 
         public async Task SetAsync(LockData lockData)

@@ -25,9 +25,9 @@ namespace slock4net.datas
                 {
                     return null;
                 }
-                byte[] result = new byte[data.Length - 6];
-                Array.Copy(data, 6, result, 0, data.Length);
-                return result;
+                byte[] value = new byte[data.Length - 6];
+                Array.Copy(data, 6, value, 0, value.Length);
+                return value;
             }
         }
 
@@ -39,9 +39,9 @@ namespace slock4net.datas
                 {
                     return "";
                 }
-                byte[] result = new byte[data.Length - 6];
-                Array.Copy(data, 6, result, 0, data.Length);
-                return Encoding.UTF8.GetString(result);
+                byte[] value = new byte[data.Length - 6];
+                Array.Copy(data, 6, value, 0, value.Length);
+                return Encoding.UTF8.GetString(value);
             }
         }
 

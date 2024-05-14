@@ -451,7 +451,7 @@ namespace slock4net
                                             {
                                                 break;
                                             }
-                                            lockCommandResult.LoadCommandData(buffer);
+                                            lockCommandResult.LoadCommandData(data);
                                         }
                                         this.HandleCommand(lockCommandResult);
                                     }
@@ -499,9 +499,9 @@ namespace slock4net
         private int SendBytes(byte[] buffer)
         {
             int n = this.socket.Send(buffer);
-            while (n > 0 && n < 64)
+            while (n > 0 && n < buffer.Length)
             {
-                int nn = this.socket.Send(buffer, n, 64 - n, SocketFlags.None);
+                int nn = this.socket.Send(buffer, n, buffer.Length - n, SocketFlags.None);
                 if (nn <= 0)
                 {
                     break;

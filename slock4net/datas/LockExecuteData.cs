@@ -5,7 +5,7 @@ using System.Text;
 
 namespace slock4net.datas
 {
-    internal class LockExecuteData : LockData
+    public class LockExecuteData : LockData
     {
         public LockExecuteData(byte commandStage, LockCommand lockCommand) : base(commandStage, ICommand.LOCK_DATA_COMMAND_TYPE_EXECUTE, 0, lockCommand.DumpCommand())
         {

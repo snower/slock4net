@@ -149,7 +149,7 @@ namespace slock4net
         public async Task<LockCommandResult> ReleaseAsync(byte flag, LockData lockData)
         {
             LockCommand command = new LockCommand(ICommand.COMMAND_TYPE_UNLOCK, lockData != null ? ((byte)(flag | ICommand.UNLOCK_FLAG_CONTAINS_DATA)) : flag,
-                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount);
+                database.DatabaseId, lockKey, lockId, timeout, expried, count, rCount, lockData);
             LockCommandResult commandResult = (LockCommandResult) await database.Client.SendCommandAsync(command);
             currentLockData = commandResult.LockResultData;
             if (commandResult.Result == ICommand.COMMAND_RESULT_SUCCED)
