@@ -76,6 +76,11 @@ namespace slock4net.Commands
         public const byte LOCK_DATA_COMMAND_TYPE_EXECUTE = 5;
         public const byte LOCK_DATA_COMMAND_TYPE_PIPELINE = 6;
 
+        public const byte LOCK_DATA_FLAG_VALUE_TYPE_NUMBER = 0x01;
+        public const byte LOCK_DATA_FLAG_VALUE_TYPE_ARRAY = 0x02;
+        public const byte LOCK_DATA_FLAG_VALUE_TYPE_KV = 0x04;
+        public const byte LOCK_DATA_FLAG_CONTAINS_PROPERTY = 0x10;
+
         public abstract byte GetCommandType();
         public abstract byte[] GetRequestId();
         public abstract ICommand LoadCommand(byte[] buffer);

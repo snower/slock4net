@@ -1,4 +1,5 @@
-﻿using System;
+﻿using slock4net.Commands;
+using System;
 using System.Text;
 
 namespace slock4net.datas
@@ -12,6 +13,18 @@ namespace slock4net.datas
             this.data = data;
         }
 
+        private int ValueOffset
+        {
+            get
+            {
+                if ((data[5] & ICommand.LOCK_DATA_FLAG_CONTAINS_PROPERTY) != 0)
+                {
+                    return ((((int)data[6]) & 0xff) | (((int)data[7]) & 0xff) << 8) + 6;
+                }
+                return 6;
+            }
+        }
+
         public byte[] RawData
         {
             get { return data; }
@@ -21,12 +34,13 @@ namespace slock4net.datas
         {
             get
             {
-                if (data.Length <= 6)
+                int offset = ValueOffset;
+                if (data.Length <= offset)
                 {
                     return null;
                 }
-                byte[] value = new byte[data.Length - 6];
-                Array.Copy(data, 6, value, 0, value.Length);
+                byte[] value = new byte[data.Length - offset];
+                Array.Copy(data, offset, value, 0, value.Length);
                 return value;
             }
         }
@@ -35,12 +49,13 @@ namespace slock4net.datas
         {
             get
             {
-                if (data.Length <= 6)
+                int offset = ValueOffset;
+                if (data.Length <= offset)
                 {
                     return "";
                 }
-                byte[] value = new byte[data.Length - 6];
-                Array.Copy(data, 6, value, 0, value.Length);
+                byte[] value = new byte[data.Length - offset];
+                Array.Copy(data, offset, value, 0, value.Length);
                 return Encoding.UTF8.GetString(value);
             }
         }
@@ -49,11 +64,12 @@ namespace slock4net.datas
         {
             get
             {
+                int offset = ValueOffset;
                 long value = 0;
                 for (int i = 0; i < 8; i++)
                 {
-                    if (i + 6 >= data.Length) break;
-                    value |= ((((long)data[i + 6]) & 0xff) << (i * 8));
+                    if (i + offset >= data.Length) break;
+                    value |= ((((long)data[i + offset]) & 0xff) << (i * 8));
                 }
                 return value;
             }
