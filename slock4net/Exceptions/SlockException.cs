@@ -4,7 +4,7 @@ namespace slock4net.Exceptions
 {
     public class SlockException : Exception
     {
-        public SlockException() : base()
+        public SlockException() : base("slock exception")
         {
         }
 

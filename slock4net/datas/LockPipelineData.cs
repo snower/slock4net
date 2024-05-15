@@ -16,7 +16,7 @@ namespace slock4net.datas
         public override byte[] DumpData()
         {
             if (lockDatas == null || lockDatas.Length == 0) {
-                throw new LockDataException();
+                throw new LockDataException("Data value is null");
             }
             byte[][] values = new byte[lockDatas.Length][];
             int valueLength = 0;

@@ -102,7 +102,7 @@ namespace slock4net.Commands
         {
             if ((Flag & ICommand.LOCK_FLAG_CONTAINS_DATA) == 0) return null;
             if (LockData == null) {
-                throw new LockDataException();
+                throw new LockDataException("Data is null");
             }
             return LockData.DumpData();
         }
@@ -163,7 +163,7 @@ namespace slock4net.Commands
             Task.Delay(((int)(this.Timeout & 0xffff) + 120) * 1000, this.timeoutCancellationTokenSource.Token).ContinueWith(t =>
             {
                 if (t.Status == TaskStatus.Canceled) return;
-                this.taskCompletionSource.SetException(new ClientCommandTimeoutException());
+                this.taskCompletionSource.SetException(new ClientCommandTimeoutException("The client waits for command execution to return a timeout"));
             });
             return this.taskCompletionSource.Task;
         }

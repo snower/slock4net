@@ -67,7 +67,7 @@ namespace slock4net
 
             if (clients.Count <= 0)
             {
-                throw new ClientUnconnectException();
+                throw new ClientUnconnectException("clients not connected");
             }
         }
 
@@ -180,7 +180,7 @@ namespace slock4net
         {
             if (this.closed)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
 
             SlockClient livedLeaderClient = this.livedLeaderClient;
@@ -192,7 +192,7 @@ namespace slock4net
             LinkedListNode<SlockClient> firstNode = livedClients.First;
             if(firstNode == null || firstNode.Value == null)
             {
-                throw new ClientUnconnectException();
+                throw new ClientUnconnectException("clients not connected");
             }
             return firstNode.Value.SendCommand(command);
         }
@@ -201,7 +201,7 @@ namespace slock4net
         {
             if (this.closed)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
 
             SlockClient livedLeaderClient = this.livedLeaderClient;
@@ -213,7 +213,7 @@ namespace slock4net
             LinkedListNode<SlockClient> firstNode = livedClients.First;
             if (firstNode == null || firstNode.Value == null)
             {
-                throw new ClientUnconnectException();
+                throw new ClientUnconnectException("clients not connected");
             }
             return await firstNode.Value.SendCommandAsync(command);
         }

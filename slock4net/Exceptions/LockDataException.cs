@@ -6,5 +6,8 @@ namespace slock4net.Exceptions
 {
     public class LockDataException : SlockException
     {
+        public LockDataException(string message) : base(message)
+        {
+        }
     }
 }

@@ -1,5 +1,9 @@
 namespace slock4net.Exceptions
 {
-    public class ClientCommandException : SlockException {
+    public class ClientCommandException : SlockException
+    {
+        public ClientCommandException(string message) : base(message)
+        {
+        }
     }
 }

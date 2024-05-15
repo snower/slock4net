@@ -119,6 +119,7 @@ namespace slock4net
 
             this.Connect();
             this.thread = new Thread(new ThreadStart(this.Run));
+            this.thread.Name = "slock-io-" + this.host + ":" + this.port;
             this.thread.IsBackground = true;
             this.thread.Start();
         }
@@ -153,11 +154,13 @@ namespace slock4net
             } catch(Exception)
             {
                 this.thread = new Thread(new ThreadStart(this.Run));
+                this.thread.Name = "slock-io-" + this.host + ":" + this.port;
                 this.thread.IsBackground = true;
                 this.thread.Start();
                 return null;
             }
             this.thread = new Thread(new ThreadStart(this.Run));
+            this.thread.Name = "slock-io-" + this.host + ":" + this.port;
             this.thread.IsBackground = true;
             this.thread.Start();
             return this;
@@ -536,13 +539,13 @@ namespace slock4net
         {
             if (this.closed)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
 
             byte[] buffer = command.DumpCommand();
             if (!command.CreateWaiter())
             {
-                throw new ClientCommandException();
+                throw new ClientCommandException("Adding a wait command returns waiter failure");
             }
 
             byte[] requestId = command.GetRequestId();
@@ -550,29 +553,29 @@ namespace slock4net
             {
                 if (this.socket == null)
                 {
-                    throw new ClientUnconnectException();
+                    throw new ClientUnconnectException("client not connected " + host + ":" + port);
                 }
                 if (!this.requests.TryAdd(requestId, command))
                 {
-                    throw new ClientCommandException();
+                    throw new ClientCommandException("Adding a wait command returns requests failure");
                 }
 
                 try
                 {
                     if(SendBytes(buffer) < 64)
                     {
-                        throw new ClientOutputStreamException();
+                        throw new ClientOutputStreamException("Client writes data abnormally");
                     }
                     byte[] extraData = command.GetExtraData();
                     if (extraData != null)
                     {
                         if (SendBytes(extraData) < extraData.Length)
                         {
-                            throw new ClientOutputStreamException();
+                            throw new ClientOutputStreamException("Client writes data abnormally");
                         }
                     }
                 }
-                catch (SocketException)
+                catch (SocketException e)
                 {
                     this.requests.TryRemove(requestId, out Command c);
                     try
@@ -582,18 +585,18 @@ namespace slock4net
                     catch (Exception)
                     {
                     }
-                    throw new ClientOutputStreamException();
+                    throw new ClientOutputStreamException("Client writes data abnormally: " + e);
                 }
             }
 
             if (!command.WaitWaiter())
             {
-                this.requests.TryRemove(requestId, out Command c);
-                throw new ClientCommandTimeoutException();
+                this.requests.TryRemove(requestId, out Command _);
+                throw new ClientCommandTimeoutException("The client waits for command execution to return a timeout");
             }
             if (command.CommandResult == null)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
             return command.CommandResult;
         }
@@ -602,12 +605,12 @@ namespace slock4net
         {
             if (this.closed)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
             byte[] buffer = command.DumpCommand();
             if (!command.CreateTask())
             {
-                throw new ClientCommandException();
+                throw new ClientCommandException("Adding a wait command returns async Task failure");
             }
 
             byte[] requestId = command.GetRequestId();
@@ -615,29 +618,29 @@ namespace slock4net
             {
                 if (this.socket == null)
                 {
-                    throw new ClientUnconnectException();
+                    throw new ClientUnconnectException("client not connected " + host + ":" + port);
                 }
                 if (!this.requests.TryAdd(requestId, command))
                 {
-                    throw new ClientCommandException();
+                    throw new ClientCommandException("Adding a wait command returns requests failure");
                 }
 
                 try
                 {
                     if (SendBytes(buffer) < 64)
                     {
-                        throw new ClientOutputStreamException();
+                        throw new ClientOutputStreamException("Client writes data abnormally");
                     }
                     byte[] extraData = command.GetExtraData();
                     if (extraData != null)
                     {
                         if(SendBytes(extraData) < extraData.Length)
                         {
-                            throw new ClientOutputStreamException();
+                            throw new ClientOutputStreamException("Client writes data abnormally");
                         }
                     }
                 }
-                catch (SocketException)
+                catch (SocketException e)
                 {
                     this.requests.TryRemove(requestId, out Command c);
                     try
@@ -647,20 +650,20 @@ namespace slock4net
                     catch (Exception)
                     {
                     }
-                    throw new ClientOutputStreamException();
+                    throw new ClientOutputStreamException("Client writes data abnormally: " + e);
                 }
             }
 
             Task<bool> task = command.WaitTask();
             if (task == null)
             {
-                this.requests.TryRemove(requestId, out Command c);
-                throw new ClientCommandTimeoutException();
+                this.requests.TryRemove(requestId, out Command _);
+                throw new ClientCommandTimeoutException("The client waits for command execution to return a timeout");
             }
             await task;
             if (command.CommandResult == null)
             {
-                throw new ClientClosedException();
+                throw new ClientClosedException("client has been closed");
             }
             return command.CommandResult;
         }

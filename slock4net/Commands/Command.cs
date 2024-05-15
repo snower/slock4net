@@ -170,7 +170,7 @@ namespace slock4net.Commands
             Task.Delay(120000, this.timeoutCancellationTokenSource.Token).ContinueWith(t =>
             {
                 if (t.Status == TaskStatus.Canceled) return;
-                this.taskCompletionSource.SetException(new ClientCommandTimeoutException());
+                this.taskCompletionSource.SetException(new ClientCommandTimeoutException("The client waits for command execution to return a timeout"));
             });
             return this.taskCompletionSource.Task;
         }

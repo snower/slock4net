@@ -21,7 +21,7 @@ namespace slock4net.datas
         public virtual byte[] DumpData()
         {
             if (value == null) {
-                throw new LockDataException();
+                throw new LockDataException("Data value is null");
             }
             byte[] data = new byte[value.Length + 6];
             data[0] = (byte) ((value.Length + 2) & 0xff);
