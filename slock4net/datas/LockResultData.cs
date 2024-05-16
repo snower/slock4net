@@ -19,7 +19,7 @@ namespace slock4net.datas
             {
                 if ((data[5] & ICommand.LOCK_DATA_FLAG_CONTAINS_PROPERTY) != 0)
                 {
-                    return ((((int)data[6]) & 0xff) | (((int)data[7]) & 0xff) << 8) + 6;
+                    return ((((int)data[6]) & 0xff) | (((int)data[7]) & 0xff) << 8) + 8;
                 }
                 return 6;
             }
