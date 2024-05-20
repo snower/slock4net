@@ -269,7 +269,7 @@ namespace slock4net
                     0, (ushort)0, (byte)0);
             try
             {
-                LockCommandResult lockCommandResult = waitLock.Acquire((byte)0);
+                LockCommandResult lockCommandResult = waitLock.Acquire((byte)0, new LockUnsetData());
                 byte[] rlockId = lockCommandResult.LockId;
                 if (!EqualBytes(lockId, rlockId))
                 {
@@ -284,7 +284,7 @@ namespace slock4net
                     this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16), expried, (ushort)0, (byte)0);
                 try
                 {
-                    eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, new LockUnsetData());
                     currentLockData = eventLock.CurrentLockData;
                     try
                     {
@@ -309,7 +309,7 @@ namespace slock4net
                     0, (ushort)0, (byte)0);
             try
             {
-                LockCommandResult lockCommandResult = await waitLock.AcquireAsync((byte)0);
+                LockCommandResult lockCommandResult = await waitLock.AcquireAsync((byte)0, new LockUnsetData());
                 byte[] rlockId = lockCommandResult.LockId;
                 if (!EqualBytes(lockId, rlockId))
                 {
@@ -324,7 +324,7 @@ namespace slock4net
                     this.timeout | (ICommand.TIMEOUT_FLAG_LESS_LOCK_VERSION_IS_LOCK_SUCCED << 16), expried, (ushort)0, (byte)0);
                 try
                 {
-                    await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                    await eventLock.AcquireAsync(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, new LockUnsetData());
                     currentLockData = eventLock.CurrentLockData;
                     try
                     {

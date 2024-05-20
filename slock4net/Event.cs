@@ -443,7 +443,7 @@ namespace slock4net
 
                 try
                 {
-                    waitLock.Acquire();
+                    waitLock.Acquire(new LockUnsetData());
                     currentLockData = waitLock.CurrentLockData;
                 }
                 catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
@@ -458,7 +458,7 @@ namespace slock4net
 
                     try
                     {
-                        eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED);
+                        eventLock.Acquire(ICommand.LOCK_FLAG_UPDATE_WHEN_LOCKED, new LockUnsetData());
                         currentLockData = eventLock.CurrentLockData;
                         try
                         {
@@ -486,7 +486,7 @@ namespace slock4net
             }
             try
             {
-                waitLock.Acquire();
+                waitLock.Acquire(new LockUnsetData());
                 currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
@@ -524,7 +524,7 @@ namespace slock4net
 
                 try
                 {
-                    await waitLock.AcquireAsync();
+                    await waitLock.AcquireAsync(new LockUnsetData());
                     currentLockData = waitLock.CurrentLockData;
                 }
                 catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
@@ -543,7 +543,7 @@ namespace slock4net
                         currentLockData = eventLock.CurrentLockData;
                         try
                         {
-                            await eventLock.ReleaseAsync();
+                            await eventLock.ReleaseAsync(new LockUnsetData());
                         }
                         catch (SlockException)
                         {
@@ -567,7 +567,7 @@ namespace slock4net
             }
             try
             {
-                await waitLock.AcquireAsync();
+                await waitLock.AcquireAsync(new LockUnsetData());
                 currentLockData = waitLock.CurrentLockData;
             }
             catch (SlockException e) when (e is LockTimeoutException || e is ClientCommandTimeoutException)
