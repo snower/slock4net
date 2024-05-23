@@ -765,6 +765,16 @@ namespace slock4net
             return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried);
         }
 
+        public MaxConcurrentFlow NewMaxConcurrentFlow(byte[] flowKey, ushort count, uint timeout, uint expried, byte priority)
+        {
+            return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried, priority);
+        }
+
+        public MaxConcurrentFlow NewMaxConcurrentFlow(string flowKey, ushort count, uint timeout, uint expried, byte priority)
+        {
+            return this.SelectDatabase(0).NewMaxConcurrentFlow(flowKey, count, timeout, expried, priority);
+        }
+
         public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
@@ -773,6 +783,16 @@ namespace slock4net
         public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period, byte priority)
+        {
+            return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period, priority);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period, byte priority)
+        {
+            return this.SelectDatabase(0).NewTokenBucketFlow(flowKey, count, timeout, period, priority);
         }
 
         public GroupEvent NewGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
@@ -803,6 +823,16 @@ namespace slock4net
         public TreeLock NewTreeLock(string lockKey, uint timeout, uint expried)
         {
             return this.SelectDatabase(0).NewTreeLock(lockKey, timeout, expried);
+        }
+
+        public PriorityLock NewPriorityLock(byte[] lockKey, byte priority, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewPriorityLock(lockKey, priority, timeout, expried);
+        }
+
+        public PriorityLock NewPriorityLock(string lockKey, byte priority, uint timeout, uint expried)
+        {
+            return this.SelectDatabase(0).NewPriorityLock(lockKey, priority, timeout, expried);
         }
     }
 }

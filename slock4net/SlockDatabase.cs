@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace slock4net
 {
@@ -108,6 +109,16 @@ namespace slock4net
             return new MaxConcurrentFlow(this, Encoding.UTF8.GetBytes(flowKey), count, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried));
         }
 
+        public MaxConcurrentFlow NewMaxConcurrentFlow(byte[] flowKey, ushort count, uint timeout, uint expried, byte priority)
+        {
+            return new MaxConcurrentFlow(this, flowKey, count, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried), priority);
+        }
+
+        public MaxConcurrentFlow NewMaxConcurrentFlow(string flowKey, ushort count, uint timeout, uint expried, byte priority)
+        {
+            return new MaxConcurrentFlow(this, Encoding.UTF8.GetBytes(flowKey), count, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried), priority);
+        }
+
         public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period)
         {
             return new TokenBucketFlow(this, flowKey, count, MergeTimeoutFlag(timeout), period);
@@ -116,6 +127,16 @@ namespace slock4net
         public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period)
         {
             return new TokenBucketFlow(this, Encoding.UTF8.GetBytes(flowKey), count, MergeTimeoutFlag(timeout), period);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(byte[] flowKey, ushort count, uint timeout, double period, byte priority)
+        {
+            return new TokenBucketFlow(this, flowKey, count, MergeTimeoutFlag(timeout), period, priority);
+        }
+
+        public TokenBucketFlow NewTokenBucketFlow(string flowKey, ushort count, uint timeout, double period, byte priority)
+        {
+            return new TokenBucketFlow(this, Encoding.UTF8.GetBytes(flowKey), count, MergeTimeoutFlag(timeout), period, priority);
         }
 
         public GroupEvent NewGroupEvent(byte[] groupKey, ulong clientId, ulong versionId, uint timeout, uint expried)
@@ -146,6 +167,16 @@ namespace slock4net
         public TreeLock NewTreeLock(string lockKey, uint timeout, uint expried)
         {
             return new TreeLock(this, lockKey, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried));
+        }
+
+        public PriorityLock NewPriorityLock(byte[] lockKey, byte priority, uint timeout, uint expried)
+        {
+            return new PriorityLock(this, lockKey, priority, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried));
+        }
+
+        public PriorityLock NewPriorityLock(string lockKey, byte priority, uint timeout, uint expried)
+        {
+            return new PriorityLock(this, lockKey, priority, MergeTimeoutFlag(timeout), MergeExpriedFlag(expried));
         }
     }
 }

@@ -13,6 +13,11 @@ namespace slock4net.datas
             this.lockDatas = lockDatas;
         }
 
+        public LockPipelineData(LockData[] lockDatas, byte commandFlag) : base(ICommand.LOCK_DATA_STAGE_LOCK, ICommand.LOCK_DATA_COMMAND_TYPE_PIPELINE, commandFlag, null)
+        {
+            this.lockDatas = lockDatas;
+        }
+
         public override byte[] DumpData()
         {
             if (lockDatas == null || lockDatas.Length == 0) {

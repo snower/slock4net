@@ -39,6 +39,7 @@ namespace slock4net.Commands
         public const byte UNLOCK_FLAG_UNLOCK_TREE_LOCK = 0x10;
         public const byte UNLOCK_FLAG_CONTAINS_DATA = 0x20;
 
+        public const uint TIMEOUT_FLAG_RCOUNT_IS_PRIORITY = 0x0010;
         public const uint TIMEOUT_FLAG_PUSH_SUBSCRIBE = 0x0020;
         public const uint TIMEOUT_FLAG_MINUTE_TIME = 0x0040;
         public const uint TIMEOUT_FLAG_REVERSE_KEY_LOCK_WHEN_TIMEOUT = 0x0080;
@@ -80,6 +81,7 @@ namespace slock4net.Commands
         public const byte LOCK_DATA_FLAG_VALUE_TYPE_ARRAY = 0x02;
         public const byte LOCK_DATA_FLAG_VALUE_TYPE_KV = 0x04;
         public const byte LOCK_DATA_FLAG_CONTAINS_PROPERTY = 0x10;
+        public const byte LOCK_DATA_FLAG_PROCESS_FIRST_OR_LAST = 0x20;
 
         public abstract byte GetCommandType();
         public abstract byte[] GetRequestId();

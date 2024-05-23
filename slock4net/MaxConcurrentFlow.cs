@@ -6,13 +6,29 @@ namespace slock4net
 {
     public class MaxConcurrentFlow : AbstractExecution
     {
+        private byte priority;
         private Lock flowLock;
 
-        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, ushort count, uint timeout, uint expried) : base(database, flowKey, timeout, expried, (ushort)(count == 0 ? 0 : (ushort)(count - 1)), 0)
+        public byte Priority
+        {
+            get { return priority; }
+            set { priority = value; }
+        }
+
+        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, ushort count, uint timeout, uint expried, byte priority) : base(database, flowKey, timeout, expried, (ushort)(count == 0 ? 0 : (ushort)(count - 1)), 0)
+        {
+            this.priority = priority;
+        }
+
+        public MaxConcurrentFlow(SlockDatabase database, byte[] flowKey, ushort count, uint timeout, uint expried) : this(database, flowKey, count, timeout, expried, 0)
         {
         }
 
-        public MaxConcurrentFlow(SlockDatabase database, string flowKey, ushort count, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried)
+        public MaxConcurrentFlow(SlockDatabase database, string flowKey, ushort count, uint timeout, uint expried, byte priority) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried, priority)
+        {
+        }
+
+        public MaxConcurrentFlow(SlockDatabase database, string flowKey, ushort count, uint timeout, uint expried) : this(database, Encoding.UTF8.GetBytes(flowKey), count, timeout, expried, 0)
         {
         }
 
@@ -24,7 +40,8 @@ namespace slock4net
                 {
                     if (flowLock == null)
                     {
-                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                        uint timeout = priority > 0 ? this.timeout | 0x00100000 : this.timeout;
+                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, priority);
                     }
                 }
             }
@@ -39,7 +56,8 @@ namespace slock4net
                 {
                     if (flowLock == null)
                     {
-                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                        uint timeout = priority > 0 ? this.timeout | 0x00100000 : this.timeout;
+                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, priority);
                     }
                 }
             }
@@ -54,7 +72,8 @@ namespace slock4net
                 {
                     if (flowLock == null)
                     {
-                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                        uint timeout = priority > 0 ? this.timeout | 0x00100000 : this.timeout;
+                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, priority);
                     }
                 }
             }
@@ -69,7 +88,8 @@ namespace slock4net
                 {
                     if (flowLock == null)
                     {
-                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, (byte)0);
+                        uint timeout = priority > 0 ? this.timeout | 0x00100000 : this.timeout;
+                        flowLock = new Lock(database, lockKey, LockCommand.GenLockId(), timeout, expried, count, priority);
                     }
                 }
             }
