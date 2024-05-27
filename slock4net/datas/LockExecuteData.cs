@@ -11,7 +11,7 @@ namespace slock4net.datas
         {
         }
 
-        public LockExecuteData(LockCommand lockCommand) : base(ICommand.LOCK_DATA_STAGE_LOCK, ICommand.LOCK_DATA_COMMAND_TYPE_EXECUTE, 0, lockCommand.DumpCommand())
+        public LockExecuteData(LockCommand lockCommand) : base(ICommand.LOCK_DATA_STAGE_CURRENT, ICommand.LOCK_DATA_COMMAND_TYPE_EXECUTE, 0, lockCommand.DumpCommand())
         {
         }
 
@@ -19,7 +19,7 @@ namespace slock4net.datas
         {
         }
 
-        public LockExecuteData(LockCommand lockCommand, byte commandFlag) : base(ICommand.LOCK_DATA_STAGE_LOCK, ICommand.LOCK_DATA_COMMAND_TYPE_EXECUTE, commandFlag, lockCommand.DumpCommand())
+        public LockExecuteData(LockCommand lockCommand, byte commandFlag) : base(ICommand.LOCK_DATA_STAGE_CURRENT, ICommand.LOCK_DATA_COMMAND_TYPE_EXECUTE, commandFlag, lockCommand.DumpCommand())
         {
         }
     }

@@ -8,12 +8,12 @@ namespace slock4net.datas
     {
         private readonly LockData[] lockDatas;
 
-        public LockPipelineData(LockData[] lockDatas) : base(ICommand.LOCK_DATA_STAGE_LOCK, ICommand.LOCK_DATA_COMMAND_TYPE_PIPELINE, (byte)0, null)
+        public LockPipelineData(LockData[] lockDatas) : base(ICommand.LOCK_DATA_STAGE_CURRENT, ICommand.LOCK_DATA_COMMAND_TYPE_PIPELINE, (byte)0, null)
         {
             this.lockDatas = lockDatas;
         }
 
-        public LockPipelineData(LockData[] lockDatas, byte commandFlag) : base(ICommand.LOCK_DATA_STAGE_LOCK, ICommand.LOCK_DATA_COMMAND_TYPE_PIPELINE, commandFlag, null)
+        public LockPipelineData(LockData[] lockDatas, byte commandFlag) : base(ICommand.LOCK_DATA_STAGE_CURRENT, ICommand.LOCK_DATA_COMMAND_TYPE_PIPELINE, commandFlag, null)
         {
             this.lockDatas = lockDatas;
         }

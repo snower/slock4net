@@ -64,7 +64,7 @@ namespace slock4net.Commands
         public const uint EXPRIED_FLAG_UNLIMITED_EXPRIED_TIME = 0x4000;
         public const uint EXPRIED_FLAG_KEEPLIVED = 0x8000;
 
-        public const byte LOCK_DATA_STAGE_LOCK = 0;
+        public const byte LOCK_DATA_STAGE_CURRENT = 0;
         public const byte LOCK_DATA_STAGE_UNLOCK = 1;
         public const byte LOCK_DATA_STAGE_TIMEOUT = 2;
         public const byte LOCK_DATA_STAGE_EXPRIED = 3;
@@ -76,6 +76,8 @@ namespace slock4net.Commands
         public const byte LOCK_DATA_COMMAND_TYPE_SHIFT = 4;
         public const byte LOCK_DATA_COMMAND_TYPE_EXECUTE = 5;
         public const byte LOCK_DATA_COMMAND_TYPE_PIPELINE = 6;
+        public const byte LOCK_DATA_COMMAND_TYPE_PUSH = 7;
+        public const byte LOCK_DATA_COMMAND_TYPE_POP = 8;
 
         public const byte LOCK_DATA_FLAG_VALUE_TYPE_NUMBER = 0x01;
         public const byte LOCK_DATA_FLAG_VALUE_TYPE_ARRAY = 0x02;
