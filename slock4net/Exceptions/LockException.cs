@@ -1,6 +1,7 @@
 using slock4net.Commands;
 using slock4net.datas;
 using System;
+using System.Collections.Generic;
 
 namespace slock4net.Exceptions
 {
@@ -55,8 +56,10 @@ namespace slock4net.Exceptions
 
         public LockResultData LockData
         {
-            get {
-                if (commandResult is LockCommandResult lockCommandResult) {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
                     return lockCommandResult.LockResultData;
                 }
                 return null;
@@ -65,7 +68,8 @@ namespace slock4net.Exceptions
 
         public byte[] LockDataAsBytes
         {
-            get {
+            get
+            {
                 if (commandResult is LockCommandResult lockCommandResult)
                 {
                     return lockCommandResult.LockResultData.DataAsBytes;
@@ -95,6 +99,54 @@ namespace slock4net.Exceptions
                     return lockCommandResult.LockResultData.DataAsLong;
                 }
                 return 0L;
+            }
+        }
+
+        public IList<byte[]> LockDataAsList
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsList;
+                }
+                return null;
+            }
+        }
+
+        public IList<string> LockDataAsStringList
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsStringList;
+                }
+                return null;
+            }
+        }
+
+        public IDictionary<string, byte[]> LockDataAsDictionary
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsDictionary;
+                }
+                return null;
+            }
+        }
+
+        public IDictionary<string, string> LockDataAsStringDictionary
+        {
+            get
+            {
+                if (commandResult is LockCommandResult lockCommandResult)
+                {
+                    return lockCommandResult.LockResultData.DataAsStringDictionary;
+                }
+                return null;
             }
         }
     }

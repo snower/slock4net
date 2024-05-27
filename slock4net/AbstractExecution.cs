@@ -1,5 +1,7 @@
-﻿using slock4net.datas;
+﻿using slock4net.Commands;
+using slock4net.datas;
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 
 namespace slock4net
@@ -125,6 +127,54 @@ namespace slock4net
                     return 0L;
                 }
                 return currentLockData.DataAsLong;
+            }
+        }
+
+        public IList<byte[]> CurrentLockDataAsList
+        {
+            get
+            {
+                if (currentLockData == null)
+                {
+                    return null;
+                }
+                return currentLockData.DataAsList;
+            }
+        }
+
+        public IList<string> CurrentLockDataAsStringList
+        {
+            get
+            {
+                if (currentLockData == null)
+                {
+                    return null;
+                }
+                return currentLockData.DataAsStringList;
+            }
+        }
+
+        public IDictionary<string, byte[]> CurrentLockDataAsDictionary
+        {
+            get
+            {
+                if (currentLockData == null)
+                {
+                    return null;
+                }
+                return currentLockData.DataAsDictionary;
+            }
+        }
+
+        public IDictionary<string, string> CurrentLockDataAsStringDictionary
+        {
+            get
+            {
+                if (currentLockData == null)
+                {
+                    return null;
+                }
+                return currentLockData.DataAsStringDictionary;
             }
         }
     }

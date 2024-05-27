@@ -1094,6 +1094,56 @@ namespace slock4net.tests
         }
 
         [TestMethod]
+        public async Task TestPriorityLock()
+        {
+            SlockClient client = new SlockClient(clientHost, clinetPort);
+            client.Open();
+
+            try
+            {
+                Exception exception = null;
+                List<Task> tasks = new List<Task>();
+                List<PriorityLock> priorityLocks = new List<PriorityLock>();
+                for (int i = 0; i < 1000; i++)
+                {
+                    Task task = Task.Run(async () =>
+                    {
+                        PriorityLock priorityLock = client.NewPriorityLock(Encoding.UTF8.GetBytes("testPriorityLock"), (byte)(random.Next(50) + 1), 5, 10);
+                        try
+                        {
+                            await priorityLock.AcquireAsync();
+                            priorityLocks.Add(priorityLock);
+                            await priorityLock.ReleaseAsync();
+                        }
+                        catch (Exception e)
+                        {
+                            Interlocked.Exchange(ref exception, e);
+                        }
+                    });
+                    tasks.Add(task);
+                }
+                await Task.WhenAll(tasks);
+                if (exception != null)
+                {
+                    throw exception;
+                }
+                byte currentPriority = 0;
+                foreach (PriorityLock priorityLock in priorityLocks)
+                {
+                    if (priorityLock.Priority < currentPriority)
+                    {
+                        throw new SlockException("Priority Error");
+                    }
+                }
+            }
+            finally
+            {
+                await client.CloseAsync();
+            }
+        }
+
+
+        [TestMethod]
         public void TestLockData()
         {
             SlockClient client = new SlockClient(clientHost, clinetPort);
@@ -1188,6 +1238,59 @@ namespace slock4net.tests
                 }
                 lock1.Release();
                 Assert.AreEqual(lock1.CurrentLockDataAsString, "aaa");
+
+                lock1 = client.NewLock(Encoding.UTF8.GetBytes("lockdata7"), 0, 10);
+                lock1.Count = 10;
+                lock2 = client.NewLock(Encoding.UTF8.GetBytes("lockdata7"), 0, 10);
+                lock2.Count = 10;
+                lock1.Acquire(new LockPushData("aaa"));
+                Assert.IsNull(lock1.CurrentLockDataAsList);
+                lock2.Acquire(new LockPushData("bbb"));
+                IList<string> values = lock2.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(1, values.Count);
+                Assert.AreEqual("aaa", values[0]);
+                lock1.Release(new LockPushData("ccc"));
+                values = lock1.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(2, values.Count);
+                Assert.AreEqual("aaa", values[0]);
+                Assert.AreEqual("bbb", values[1]);
+                lock2.Release();
+                values = lock2.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(3, values.Count);
+                Assert.AreEqual("aaa", values[0]);
+                Assert.AreEqual("bbb", values[1]);
+                Assert.AreEqual("ccc", values[2]);
+
+                lock1 = client.NewLock(Encoding.UTF8.GetBytes("lockdata8"), 0, 10);
+                lock1.Count = 10;
+                lock2 = client.NewLock(Encoding.UTF8.GetBytes("lockdata8"), 0, 10);
+                lock2.Count = 10;
+                lock1.Acquire(new LockPushData("aaa"));
+                Assert.IsNull(lock1.CurrentLockDataAsList);
+                lock1.Update(new LockPushData("bbb"));
+                Assert.IsNotNull(lock1.CurrentLockDataAsList);
+                lock1.Update(new LockPushData("ccc"));
+                Assert.IsNotNull(lock1.CurrentLockDataAsList);
+                lock2.Acquire(new LockPopData(1));
+                values = lock2.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(3, values.Count);
+                Assert.AreEqual("aaa", values[0]);
+                Assert.AreEqual("bbb", values[1]);
+                Assert.AreEqual("ccc", values[2]);
+                lock1.Release(new LockPopData(4));
+                values = lock1.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(2, values.Count);
+                Assert.AreEqual("bbb", values[0]);
+                Assert.AreEqual("ccc", values[1]);
+                lock2.Release();
+                values = lock2.CurrentLockDataAsStringList;
+                Assert.IsNotNull(values);
+                Assert.AreEqual(0, values.Count);
             }
             finally
             {
