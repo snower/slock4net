@@ -17,6 +17,7 @@ namespace slock4net
         public abstract CommandResult SendCommand(Command command);
         public abstract bool Ping();
         public abstract Task<CommandResult> SendCommandAsync(Command command);
+        public abstract void WriteCommand(Command command);
         public abstract Task<bool> PingAsync();
         public abstract SlockDatabase SelectDatabase(byte databaseId);
         public abstract Lock NewLock(byte[] lockKey, uint timeout, uint expried);

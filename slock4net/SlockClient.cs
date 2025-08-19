@@ -13,7 +13,7 @@ namespace slock4net
 {
     public class SlockClient : ISlockClient
     {
-        private class ByteArrayComparer : IEqualityComparer<byte[]>
+        public class ByteArrayComparer : IEqualityComparer<byte[]>
         {
             public bool Equals(byte[] x, byte[] y)
             {
@@ -57,6 +57,7 @@ namespace slock4net
         protected ConcurrentDictionary<byte[], Command> requests;
         protected SlockReplsetClient replsetClient;
         protected byte[] clientId;
+        protected byte initType;
         protected bool closed = false;
 
         public SlockClient() : this("127.0.0.1", 5658)
@@ -83,7 +84,7 @@ namespace slock4net
             this.port = port;
             this.replsetClient = replsetClient;
             this.databases = databases;
-            this.requests = new ConcurrentDictionary<byte[], Command>(new ByteArrayComparer());
+            this.requests = replsetClient.Requests;
         }
 
         public virtual void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag)
@@ -199,25 +200,37 @@ namespace slock4net
 
             lock (this)
             {
-                foreach (byte[] requestId in this.requests.Keys.ToArray())
+                if (replsetClient == null || !replsetClient.HasLivedClient)
                 {
-                    if (this.requests.TryRemove(requestId, out Command command) && command != null)
+                    foreach (byte[] requestId in this.requests.Keys.ToArray())
                     {
-                        command.CommandResult = null;
-                        if (!command.WakeupWaiter())
+                        if (this.requests.TryRemove(requestId, out Command command) && command != null)
                         {
-                            command.WakeupTask();
+                            command.CommandResult = null;
+                            if (replsetClient != null && command.RetryType == 2)
+                            {
+                                replsetClient.RemovePendingRequestCommand(command);
+                            }
+
+                            if (!command.WakeupWaiter())
+                            {
+                                command.WakeupTask();
+                            }
                         }
                     }
                 }
 
-                for (int i = 0; i < databases.Length; i++)
+                if (replsetClient != null)
                 {
-                    if (databases[i] != null)
+                    for (int i = 0; i < databases.Length; i++)
                     {
-                        databases[i].Close();
+                        if (databases[i] != null)
+                        {
+                            databases[i].Close();
+                        }
+
+                        databases[i] = null;
                     }
-                    databases[i] = null;
                 }
             }
         }
@@ -297,7 +310,7 @@ namespace slock4net
             InitCommandResult initCommandResult = this.InitClient();
             if (this.replsetClient != null)
             {
-                replsetClient.AddLivedClient(this, initCommandResult.InitType == 1);
+                replsetClient.AddLivedClient(this, (initCommandResult.InitType & ICommand.INIT_TYPE_FLAG_IS_LEADER) != 0);
             }
         }
 
@@ -305,14 +318,22 @@ namespace slock4net
         {
             lock (this)
             {
-                foreach (byte[] requestId in this.requests.Keys.ToArray())
+                if (replsetClient == null || !replsetClient.HasLivedClient)
                 {
-                    if (this.requests.TryRemove(requestId, out Command command) && command != null)
+                    foreach (byte[] requestId in this.requests.Keys.ToArray())
                     {
-                        command.CommandResult = null;
-                        if (!command.WakeupWaiter())
+                        if (this.requests.TryRemove(requestId, out Command command) && command != null)
                         {
-                            command.WakeupTask();
+                            if (replsetClient != null && command.RetryType == 2)
+                            {
+                                replsetClient.RemovePendingRequestCommand(command);
+                            }
+
+                            command.CommandResult = null;
+                            if (!command.WakeupWaiter())
+                            {
+                                command.WakeupTask();
+                            }
                         }
                     }
                 }
@@ -487,6 +508,12 @@ namespace slock4net
                                         this.HandleCommand(pingCommandResult);
                                     }
                                     break;
+                                case ICommand.COMMAND_TYPE_INIT:
+                                    InitCommandResult initCommandResult = new InitCommandResult();
+                                    if (initCommandResult.LoadCommand(buffer) != null) {
+                                        handleInitCommand(initCommandResult);
+                                    }
+                                    break;
                             }
                         }
                     }
@@ -505,6 +532,24 @@ namespace slock4net
                 this.closed = true;
                 this.replsetClient = null;
             }
+        }
+        
+        protected void handleInitCommand(InitCommandResult initCommandResult) {
+            if (initCommandResult.Result != ICommand.COMMAND_RESULT_SUCCED) return;
+
+            if (replsetClient != null) {
+                if ((initCommandResult.InitType & ICommand.INIT_TYPE_FLAG_IS_SHUTDOWN) != 0) {
+                    replsetClient.RemoveLivedClient(this);
+                } else if ((initType & ICommand.INIT_TYPE_FLAG_IS_LEADER) == 0 && (initCommandResult.InitType & ICommand.INIT_TYPE_FLAG_IS_LEADER) != 0) {
+                    replsetClient.AddLivedLeaderClient(this);
+                } else if ((initType & ICommand.INIT_TYPE_FLAG_IS_LEADER) != 0 && (initCommandResult.InitType & ICommand.INIT_TYPE_FLAG_IS_LEADER) == 0) {
+                    replsetClient.RemoveLivedLeaderClient(this);
+                }
+                if ((initType & ICommand.INIT_TYPE_FLAG_HAS_LEADER) == 0 && (initCommandResult.InitType & ICommand.INIT_TYPE_FLAG_HAS_LEADER) != 0) {
+                    replsetClient.WakeupPendingRequestCommands( this);
+                }
+            }
+            initType = initCommandResult.InitType;
         }
 
         protected void HandleCommand(CommandResult commandResult)
@@ -553,49 +598,83 @@ namespace slock4net
             {
                 if (this.socket == null)
                 {
-                    throw new ClientUnconnectException("client not connected " + host + ":" + port);
-                }
-                if (!this.requests.TryAdd(requestId, command))
-                {
-                    throw new ClientCommandException("Adding a wait command returns requests failure");
-                }
-
-                try
-                {
-                    if(SendBytes(buffer) < 64)
+                    if (replsetClient == null || command.RetryType != 0 ||
+                        !replsetClient.DoPendingRequestCommand(this, command))
                     {
-                        throw new ClientOutputStreamException("Client writes data abnormally");
+                        throw new ClientUnconnectException("client not connected " + host + ":" + port);
                     }
-                    byte[] extraData = command.GetExtraData();
-                    if (extraData != null)
+                    if (!this.requests.TryAdd(requestId, command))
                     {
-                        if (SendBytes(extraData) < extraData.Length)
+                        throw new ClientCommandException("Adding a wait command returns requests failure");
+                    }
+                }
+                else
+                {
+                    if (!this.requests.TryAdd(requestId, command))
+                    {
+                        throw new ClientCommandException("Adding a wait command returns requests failure");
+                    }
+                    try
+                    {
+                        if (SendBytes(buffer) < 64)
                         {
                             throw new ClientOutputStreamException("Client writes data abnormally");
                         }
+
+                        byte[] extraData = command.GetExtraData();
+                        if (extraData != null)
+                        {
+                            if (SendBytes(extraData) < extraData.Length)
+                            {
+                                throw new ClientOutputStreamException("Client writes data abnormally");
+                            }
+                        }
                     }
-                }
-                catch (SocketException e)
-                {
-                    this.requests.TryRemove(requestId, out Command c);
-                    try
+                    catch (SocketException e)
                     {
-                        this.socket.Close();
+                        if (replsetClient == null || command.RetryType != 0 ||
+                            !replsetClient.DoPendingRequestCommand(this, command))
+                        {
+                            this.requests.TryRemove(requestId, out Command c);
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                            throw new ClientOutputStreamException("Client writes data abnormally: " + e);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
                     }
-                    catch (Exception)
-                    {
-                    }
-                    throw new ClientOutputStreamException("Client writes data abnormally: " + e);
                 }
             }
 
             if (!command.WaitWaiter())
             {
                 this.requests.TryRemove(requestId, out Command _);
+                if (replsetClient != null && command.RetryType == 2) {
+                    replsetClient.RemovePendingRequestCommand(command);
+                }
                 throw new ClientCommandTimeoutException("The client waits for command execution to return a timeout");
             }
             if (command.CommandResult == null)
             {
+                if (command.exception != null) {
+                    if (command.exception is SlockException) {
+                        throw (SlockException) command.exception;
+                    }
+                    throw new SlockException(command.exception.ToString());
+                }
                 throw new ClientClosedException("client has been closed");
             }
             return command.CommandResult;
@@ -618,39 +697,65 @@ namespace slock4net
             {
                 if (this.socket == null)
                 {
-                    throw new ClientUnconnectException("client not connected " + host + ":" + port);
-                }
-                if (!this.requests.TryAdd(requestId, command))
-                {
-                    throw new ClientCommandException("Adding a wait command returns requests failure");
-                }
-
-                try
-                {
-                    if (SendBytes(buffer) < 64)
+                    if (replsetClient == null || command.RetryType != 0 ||
+                        !replsetClient.DoPendingRequestCommand(this, command))
                     {
-                        throw new ClientOutputStreamException("Client writes data abnormally");
+                        throw new ClientUnconnectException("client not connected " + host + ":" + port);
                     }
-                    byte[] extraData = command.GetExtraData();
-                    if (extraData != null)
+                    if (!this.requests.TryAdd(requestId, command))
                     {
-                        if(SendBytes(extraData) < extraData.Length)
+                        throw new ClientCommandException("Adding a wait command returns requests failure");
+                    }
+                }
+                else
+                {
+                    if (!this.requests.TryAdd(requestId, command))
+                    {
+                        throw new ClientCommandException("Adding a wait command returns requests failure");
+                    }
+
+                    try
+                    {
+                        if (SendBytes(buffer) < 64)
                         {
                             throw new ClientOutputStreamException("Client writes data abnormally");
                         }
+
+                        byte[] extraData = command.GetExtraData();
+                        if (extraData != null)
+                        {
+                            if (SendBytes(extraData) < extraData.Length)
+                            {
+                                throw new ClientOutputStreamException("Client writes data abnormally");
+                            }
+                        }
                     }
-                }
-                catch (SocketException e)
-                {
-                    this.requests.TryRemove(requestId, out Command c);
-                    try
+                    catch (SocketException e)
                     {
-                        this.socket.Close();
+                        if (replsetClient == null || command.RetryType != 0 ||
+                            !replsetClient.DoPendingRequestCommand(this, command))
+                        {
+                            this.requests.TryRemove(requestId, out Command c);
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                            throw new ClientOutputStreamException("Client writes data abnormally: " + e);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
                     }
-                    catch (Exception)
-                    {
-                    }
-                    throw new ClientOutputStreamException("Client writes data abnormally: " + e);
                 }
             }
 
@@ -658,14 +763,87 @@ namespace slock4net
             if (task == null)
             {
                 this.requests.TryRemove(requestId, out Command _);
+                if (replsetClient != null && command.RetryType == 2) {
+                    replsetClient.RemovePendingRequestCommand(command);
+                }
                 throw new ClientCommandTimeoutException("The client waits for command execution to return a timeout");
             }
             await task;
             if (command.CommandResult == null)
             {
+                if (command.exception != null) {
+                    if (command.exception is SlockException) {
+                        throw (SlockException) command.exception;
+                    }
+                    throw new SlockException(command.exception.ToString());
+                }
                 throw new ClientClosedException("client has been closed");
             }
             return command.CommandResult;
+        }
+        
+        public void WriteCommand(Command command)
+        {
+            if (this.closed)
+            {
+                throw new ClientClosedException("client has been closed");
+            }
+            byte[] buffer = command.DumpCommand();
+            lock (this)
+            {
+                if (this.socket == null)
+                {
+                    if (replsetClient == null || command.RetryType != 0 ||
+                        !replsetClient.DoPendingRequestCommand(this, command))
+                    {
+                        throw new ClientUnconnectException("client not connected " + host + ":" + port);
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        if (SendBytes(buffer) < 64)
+                        {
+                            throw new ClientOutputStreamException("Client writes data abnormally");
+                        }
+
+                        byte[] extraData = command.GetExtraData();
+                        if (extraData != null)
+                        {
+                            if (SendBytes(extraData) < extraData.Length)
+                            {
+                                throw new ClientOutputStreamException("Client writes data abnormally");
+                            }
+                        }
+                    }
+                    catch (SocketException e)
+                    {
+                        if (replsetClient == null || command.RetryType != 0 ||
+                            !replsetClient.DoPendingRequestCommand(this, command))
+                        {
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                            throw new ClientOutputStreamException("Client writes data abnormally: " + e);
+                        }
+                        else
+                        {
+                            try
+                            {
+                                this.socket.Close();
+                            }
+                            catch (Exception)
+                            {
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         public bool Ping()

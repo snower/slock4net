@@ -24,6 +24,12 @@ namespace slock4net.Commands
         public const byte COMMAND_RESULT_STATE_ERROR = 0x0a;
         public const byte COMMAND_RESULT_ERROR = 0x0b;
         public const byte COMMAND_RESULT_LOCK_ACK_WAITING = 0x0c;
+        
+        public const byte INIT_TYPE_FLAG_HA_CLIENT = 0x01;
+        public const byte INIT_TYPE_FLAG_IS_TRANSPARENCY = 0x02;
+        public const byte INIT_TYPE_FLAG_IS_LEADER = 0x04;
+        public const byte INIT_TYPE_FLAG_HAS_LEADER = 0x08;
+        public const byte INIT_TYPE_FLAG_IS_SHUTDOWN = 0x10;
 
         public const byte LOCK_FLAG_SHOW_WHEN_LOCKED = 0x01;
         public const byte LOCK_FLAG_UPDATE_WHEN_LOCKED = 0x02;

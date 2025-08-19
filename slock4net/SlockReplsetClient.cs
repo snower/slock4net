@@ -1,7 +1,9 @@
 ﻿using slock4net.Commands;
 using slock4net.Exceptions;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace slock4net
@@ -14,6 +16,8 @@ namespace slock4net
         protected LinkedList<SlockClient> clients;
         protected LinkedList<SlockClient> livedClients;
         private volatile SlockClient livedLeaderClient;
+        protected ConcurrentDictionary<byte[], Command> requests;
+        private LinkedList<Command> pendingRequests;
         protected bool closed;
         protected SlockDatabase[] databases;
 
@@ -22,9 +26,15 @@ namespace slock4net
             this.hosts = hosts;
             this.clients = new LinkedList<SlockClient>();
             this.livedClients = new LinkedList<SlockClient>();
+            this.requests = new ConcurrentDictionary<byte[], Command>(new SlockClient.ByteArrayComparer());
+            this.pendingRequests = new LinkedList<Command>();
             this.closed = false;
             this.databases = new SlockDatabase[256];
         }
+        
+        public ConcurrentDictionary<byte[], Command> Requests { get; }
+        
+        public bool HasLivedClient => livedClients.Count > 0;
 
         public virtual void SetDefaultTimeoutFlag(ushort defaultTimeoutFlag)
         {
@@ -122,8 +132,36 @@ namespace slock4net
         public void Close()
         {
             this.closed = true;
+            ClosePendingRequestCommands();
+            foreach (byte[] requestId in this.requests.Keys.ToArray())
+            {
+                if (this.requests.TryRemove(requestId, out Command command) && command != null)
+                {
+                    command.CommandResult = null;
+                    if (command.RetryType == 2)
+                    {
+                        RemovePendingRequestCommand(command);
+                    }
+                    if (!command.WakeupWaiter())
+                    {
+                        command.WakeupTask();
+                    }
+                }
+            }
+            
             foreach (SlockClient client in this.clients)
             {
+                
+                for (int i = 0; i < databases.Length; i++)
+                {
+                    if (databases[i] != null)
+                    {
+                        databases[i].Close();
+                    }
+
+                    databases[i] = null;
+                }
+                
                 try
                 {
                     client.Close();
@@ -175,6 +213,101 @@ namespace slock4net
                 }
             }
         }
+        
+        public void AddLivedLeaderClient(SlockClient client) {
+            lock (this) {
+                this.livedLeaderClient = client;
+            }
+            this.WakeupPendingRequestCommands(client);
+        }
+
+        public void RemoveLivedLeaderClient(SlockClient client) {
+            lock (this) {
+                if (client.Equals(this.livedLeaderClient)) {
+                    this.livedLeaderClient = null;
+                }
+            }
+        }
+        
+        public bool DoPendingRequestCommand(SlockClient client, Command command) {
+            if (closed) return false;
+            if (livedLeaderClient == null && livedClients.Count <= 0) return false;
+
+            lock (this.pendingRequests)
+            {
+                if (command.RetryType < 1)
+                {
+                    try
+                    {
+                        SlockClient currentClient = livedLeaderClient;
+                        if (currentClient == null)
+                        {
+                            currentClient = livedClients.First.Value;
+                        }
+
+                        if (currentClient != client)
+                        {
+                            currentClient.WriteCommand(command);
+                            command.RetryType = 1;
+                            return true;
+                        }
+                    }
+                    catch (Exception ignored)
+                    {
+                    }
+                }
+
+                this.pendingRequests.AddLast(command);
+                command.RetryType = 2;
+                return true;
+            }
+        }
+
+        public void RemovePendingRequestCommand(Command command) {
+            lock (this.pendingRequests)
+            {
+                this.pendingRequests.Remove(command);
+            }
+        }
+
+        public void WakeupPendingRequestCommands(SlockClient client) {
+            lock (this.pendingRequests)
+            {
+                while (this.pendingRequests.First != null)
+                {
+                    Command command = this.pendingRequests.First.Value;
+                    this.pendingRequests.RemoveFirst();
+                    if (command == null) break;
+
+                    command.RetryType = 3;
+                    try
+                    {
+                        client.WriteCommand(command);
+                    }
+                    catch (Exception e)
+                    {
+                        command.exception = e;
+                        command.WakeupWaiter();
+                    }
+                }
+            }
+        }
+        
+        public void ClosePendingRequestCommands() {
+            lock (this.pendingRequests)
+            {
+                while (this.pendingRequests.First != null)
+                {
+                    Command command = this.pendingRequests.First.Value;
+                    this.pendingRequests.RemoveFirst();
+                    if (command == null) break;
+
+                    command.RetryType = 3;
+                    command.exception = new ClientClosedException("client closed");
+                    command.WakeupWaiter();
+                }
+            }
+        }
 
         public CommandResult SendCommand(Command command)
         {
@@ -218,6 +351,27 @@ namespace slock4net
             return await firstNode.Value.SendCommandAsync(command);
         }
 
+        public void WriteCommand(Command command)
+        {
+            if (this.closed)
+            {
+                throw new ClientClosedException("client has been closed");
+            }
+
+            SlockClient livedLeaderClient = this.livedLeaderClient;
+            if (livedLeaderClient != null)
+            {
+                livedLeaderClient.WriteCommand(command);
+                return;
+            }
+            
+            LinkedListNode<SlockClient> firstNode = livedClients.First;
+            if (firstNode == null || firstNode.Value == null)
+            {
+                throw new ClientUnconnectException("clients not connected");
+            }
+            firstNode.Value.WriteCommand(command);
+        }
 
         public bool Ping()
         {

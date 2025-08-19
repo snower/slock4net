@@ -17,8 +17,10 @@ namespace slock4net.Commands
         protected System.Threading.Semaphore waiter;
         protected TaskCompletionSource<bool> taskCompletionSource;
         protected CancellationTokenSource timeoutCancellationTokenSource;
-
+        public int RetryType { get; set; }
         public CommandResult CommandResult;
+        public Exception exception;
+        
         public Command(byte commandType)
         {
             this.CommandType = commandType;
