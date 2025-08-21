@@ -20,7 +20,7 @@ namespace slock4net.Commands
                     bw.Write(this.Result);
                     bw.Write(new byte[44], 0, 44);
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
 

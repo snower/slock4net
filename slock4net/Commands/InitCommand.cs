@@ -27,7 +27,7 @@ namespace slock4net.Commands
                     bw.Write(this.ClientId, 0, 16);
                     bw.Write(new byte[29], 0, 29);
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
 
@@ -54,7 +54,7 @@ namespace slock4net.Commands
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     long timestamp = (new DateTimeOffset(DateTime.Now)).ToUnixTimeMilliseconds();
-                    long randNumber = (long)((new Random()).NextDouble() * 0xffffffffffffffffL);
+                    long randNumber = (long)(random.NextDouble() * 0xffffffffffffL);
                     long ri = System.Threading.Interlocked.Increment(ref clientIdIndex) & 0x7fffffffL;
                     bw.Write((byte)((timestamp >> 40) & 0xff));
                     bw.Write((byte)((timestamp >> 32) & 0xff));
@@ -73,7 +73,7 @@ namespace slock4net.Commands
                     bw.Write((byte)((ri >> 8) & 0xff));
                     bw.Write((byte)(ri & 0xff));
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
     }

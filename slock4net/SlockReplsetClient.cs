@@ -31,8 +31,8 @@ namespace slock4net
             this.closed = false;
             this.databases = new SlockDatabase[256];
         }
-        
-        public ConcurrentDictionary<byte[], Command> Requests { get; }
+
+        public ConcurrentDictionary<byte[], Command> Requests => requests;
         
         public bool HasLivedClient => livedClients.Count > 0;
 

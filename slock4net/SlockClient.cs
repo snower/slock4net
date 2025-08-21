@@ -511,7 +511,7 @@ namespace slock4net
                                 case ICommand.COMMAND_TYPE_INIT:
                                     InitCommandResult initCommandResult = new InitCommandResult();
                                     if (initCommandResult.LoadCommand(buffer) != null) {
-                                        handleInitCommand(initCommandResult);
+                                        HandleInitCommand(initCommandResult);
                                     }
                                     break;
                             }
@@ -534,7 +534,7 @@ namespace slock4net
             }
         }
         
-        protected void handleInitCommand(InitCommandResult initCommandResult) {
+        protected void HandleInitCommand(InitCommandResult initCommandResult) {
             if (initCommandResult.Result != ICommand.COMMAND_RESULT_SUCCED) return;
 
             if (replsetClient != null) {
@@ -555,6 +555,16 @@ namespace slock4net
         protected void HandleCommand(CommandResult commandResult)
         {
             byte[] requestId = commandResult.GetRequestId();
+            if (replsetClient != null && commandResult.Result == ICommand.COMMAND_RESULT_STATE_ERROR && commandResult is LockCommandResult) {
+                if (requests.TryGetValue(requestId, out Command c))
+                {
+                    if (c.RetryType < 2 && replsetClient.DoPendingRequestCommand(this, c)) {
+                        return;
+                    }
+                }
+                return;
+            }
+            
             if (this.requests.TryRemove(requestId, out Command command) && command != null)
             {
                 command.CommandResult = commandResult;

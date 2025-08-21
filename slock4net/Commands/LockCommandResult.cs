@@ -44,7 +44,7 @@ namespace slock4net.Commands
                     bw.Write(this.RCount);
                     bw.Write(new byte[4], 0, 4);
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
 

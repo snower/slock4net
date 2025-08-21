@@ -9,6 +9,7 @@ namespace slock4net.Commands
     public class Command : ICommand
     {
         private static long requestIdIndex = 0;
+        protected static Random random = new Random();
         public byte Magic { get; protected set; }
         public byte Version { get; protected set; }
         public byte CommandType { get; protected set; }
@@ -46,7 +47,7 @@ namespace slock4net.Commands
                     bw.Write(this.RequestId, 0, 16);
                     bw.Write(new byte[45], 0, 45);
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
 
@@ -82,7 +83,7 @@ namespace slock4net.Commands
                 using (BinaryWriter bw = new BinaryWriter(ms))
                 {
                     long timestamp = (new DateTimeOffset(DateTime.Now)).ToUnixTimeMilliseconds();
-                    long randNumber = (long) ((new Random()).NextDouble() * 0xffffffffffffffffL);
+                    long randNumber = (long) (random.NextDouble() * 0xffffffffffffL);
                     long ri = System.Threading.Interlocked.Increment(ref requestIdIndex) & 0x7fffffffL;
                     bw.Write((byte)((timestamp >> 40) & 0xff));
                     bw.Write((byte)((timestamp >> 32) & 0xff));
@@ -101,7 +102,7 @@ namespace slock4net.Commands
                     bw.Write((byte)((ri >> 8) & 0xff));
                     bw.Write((byte)(ri & 0xff));
                 }
-                return ms.ToArray();
+                return ms.GetBuffer();
             }
         }
 
@@ -171,8 +172,9 @@ namespace slock4net.Commands
             }
             Task.Delay(120000, this.timeoutCancellationTokenSource.Token).ContinueWith(t =>
             {
-                if (t.Status == TaskStatus.Canceled) return;
+                if (t.Status == TaskStatus.Canceled || this.taskCompletionSource == null) return;
                 this.taskCompletionSource.SetException(new ClientCommandTimeoutException("The client waits for command execution to return a timeout"));
+                this.taskCompletionSource = null;
             });
             return this.taskCompletionSource.Task;
         }
